@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avani Albedo | Urban Heat Action Agent & Prescriptive Climate Resilience Engine</title>
+  
+  <!-- Modern Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet CSS for Interactive Geospatial Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="brand-logo">
+        <span class="logo-icon">🌍</span>
+        <div class="brand-text">
+          <div class="brand-title">AVANI ALBEDO</div>
+          <div class="brand-subtitle">Urban Heat Action Agent • Prescriptive Climate Resilience</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="header-center">
+      <span class="slogan-badge">✨ Optimizing Albedo, Cooling the Earth</span>
+    </div>
+
+    <div class="header-right">
+      <div class="status-pill" id="system-status-pill">
+        <span class="status-dot"></span>
+        <span id="system-status-text">Connecting to Climate Engine...</span>
+      </div>
+      <a href="https://github.com/shivajibodkhe/Avani_Albedo" target="_blank" rel="noreferrer" class="github-link" title="View Source on GitHub">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span>GitHub</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <main class="app-layout">
+    
+    <!-- Left Sidebar: Controls & Scenario Setup -->
+    <aside class="sidebar-panel">
+      <div class="panel-section">
+        <h3 class="section-title">📍 Target Geography</h3>
+        <div class="form-group">
+          <label for="city-select">Metropolitan Region</label>
+          <select id="city-select" class="form-control">
+            <option value="Bengaluru">Bengaluru Urban (12 Vulnerability Wards)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3 class="section-title">🎯 Climate Objective & Scenario</h3>
+        <div class="scenario-buttons">
+          <button class="scenario-btn active" data-type="optimized">
+            <span class="btn-icon">⚡</span>
+            <div class="btn-text">
+              <strong>AI Pareto-Optimized</strong>
+              <small>Max cooling & health per rupee</small>
+            </div>
+          </button>
+          <button class="scenario-btn" data-type="green_first">
+            <span class="btn-icon">🌳</span>
+            <div class="btn-text">
+              <strong>Green First</strong>
+              <small>70% Urban Canopy expansion</small>
+            </div>
+          </button>
+          <button class="scenario-btn" data-type="albedo_first">
+            <span class="btn-icon">🏢</span>
+            <div class="btn-text">
+              <strong>Albedo First</strong>
+              <small>65% Cool Roof retrofits</small>
+            </div>
+          </button>
+          <button class="scenario-btn" data-type="public_health_first">
+            <span class="btn-icon">🏥</span>
+            <div class="btn-text">
+              <strong>Public Health First</strong>
+              <small>Schools, hospitals & hydration</small>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="slider-header">
+          <h3 class="section-title">💰 Intervention Budget</h3>
+          <span class="budget-display" id="budget-value-display">₹100.0 Lakhs (₹1.00 Cr)</span>
+        </div>
+        <input type="range" id="budget-slider" min="10" max="500" step="5" value="100" class="custom-slider">
+        <div class="slider-markers">
+          <span>₹10L</span>
+          <span>₹1 Cr</span>
+          <span>₹2.5 Cr</span>
+          <span>₹5 Cr</span>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3 class="section-title">🗺️ GIS Layer Overlays</h3>
+        <div class="layer-toggles">
+          <label class="toggle-item">
+            <input type="checkbox" id="layer-heat" checked>
+            <span class="toggle-indicator heat-color"></span>
+            <span>Land Surface Temp (LST Anomaly)</span>
+          </label>
+          <label class="toggle-item">
+            <input type="checkbox" id="layer-infra" checked>
+            <span class="toggle-indicator infra-color"></span>
+            <span>Critical Assets (Schools & Hospitals)</span>
+          </label>
+          <label class="toggle-item">
+            <input type="checkbox" id="layer-interventions" checked>
+            <span class="toggle-indicator alloc-color"></span>
+            <span>Optimized Intervention Sites</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="action-buttons-group">
+        <button id="run-agent-btn" class="primary-btn glow-effect">
+          <span class="btn-spinner hidden" id="agent-spinner"></span>
+          <span id="btn-text">🚀 Run Avani Climate Agent</span>
+        </button>
+        <button id="compare-btn" class="secondary-btn">
+          📊 Compare All 4 Scenarios
+        </button>
+      </div>
+    </aside>
+
+    <!-- Center/Main: Interactive GIS Heat Map -->
+    <section class="map-container">
+      <div id="gis-map"></div>
+      
+      <!-- Floating Map Legend -->
+      <div class="map-legend">
+        <div class="legend-header">Heat Vulnerability Index (HVI)</div>
+        <div class="legend-scale">
+          <div class="legend-item"><span class="color-box crit"></span> Critical (85-100)</div>
+          <div class="legend-item"><span class="color-box sev"></span> Severe (70-85)</div>
+          <div class="legend-item"><span class="color-box high"></span> High (50-70)</div>
+          <div class="legend-item"><span class="color-box mod"></span> Moderate (30-50)</div>
+          <div class="legend-item"><span class="color-box low"></span> Low (0-30)</div>
+        </div>
+        <div class="legend-footer">Data: Landsat 8/9 TIRS + Sentinel-2 composite</div>
+      </div>
+
+      <!-- Quick Ward Inspector Card -->
+      <div class="cell-inspector-card hidden" id="cell-inspector">
+        <div class="inspector-header">
+          <span id="inspector-title">Ward Inspector</span>
+          <button class="close-inspector-btn" id="close-inspector">✕</button>
+        </div>
+        <div class="inspector-body" id="inspector-content">
+          <!-- Populated dynamically via JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Right/Bottom: Results & Gemini Prescriptive Action Plan -->
+    <aside class="results-panel">
+      
+      <!-- Top KPI Metric Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Projected Cooling</div>
+          <div class="kpi-value cyan" id="kpi-cooling">-1.42 °C</div>
+          <div class="kpi-sub" id="kpi-max-cooling">Peak: -2.85 °C in Hotspots</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Citizens Protected</div>
+          <div class="kpi-value emerald" id="kpi-beneficiaries">142,500</div>
+          <div class="kpi-sub">Vulnerable residents & commuters</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Budget Utilized</div>
+          <div class="kpi-value purple" id="kpi-budget">₹99.6 Lakhs</div>
+          <div class="kpi-sub" id="kpi-budget-pct">99.6% of ₹1.00 Cr budget</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Exposure Reduction</div>
+          <div class="kpi-value orange" id="kpi-exposure">38.4%</div>
+          <div class="kpi-sub">HVI thermal load mitigation</div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="results-tabs">
+        <button class="tab-btn active" data-tab="tab-plan">🤖 Gemini Action Plan</button>
+        <button class="tab-btn" data-tab="tab-allocations">📋 Ward Allocations</button>
+        <button class="tab-btn" data-tab="tab-comparison">⚖️ Scenario Comparison</button>
+      </div>
+
+      <!-- Tab 1: Gemini Prescriptive Action Plan -->
+      <div class="tab-pane active" id="tab-plan">
+        <div class="plan-header-box">
+          <div class="plan-meta">
+            <span class="badge ai-badge" id="plan-model-badge">Gemini 2.5 Flash</span>
+            <span class="badge time-badge" id="plan-solver-badge">OR-Tools SCIP • 42ms</span>
+          </div>
+          <h2 class="plan-title" id="plan-title">Prescriptive Climate Action Plan</h2>
+        </div>
+
+        <div class="plan-section-card">
+          <h4>📌 Executive Briefing</h4>
+          <p id="plan-exec-summary" class="summary-text">
+            Generating prescriptive plan...
+          </p>
+        </div>
+
+        <div class="plan-section-card">
+          <h4>🔬 Physical & Thermodynamic Rationale</h4>
+          <p id="plan-rationale" class="rationale-text">
+            Rationale loading...
+          </p>
+        </div>
+
+        <div class="plan-section-card">
+          <h4>🚨 Priority Ward Interventions</h4>
+          <div class="ward-priority-list" id="ward-priority-container">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <div class="plan-section-card">
+          <h4>📅 3-Phase Implementation Roadmap</h4>
+          <div class="timeline-container" id="timeline-container">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+
+        <div class="plan-section-card">
+          <h4>🌱 Environmental & Social Co-Benefits</h4>
+          <ul class="co-benefits-list" id="co-benefits-container">
+            <!-- Populated via JS -->
+          </ul>
+        </div>
+
+        <div class="plan-footer-actions">
+          <button class="export-btn" onclick="window.print()">🖨️ Export / Print Action Plan</button>
+          <button class="export-btn" id="export-json-btn">💾 Download Plan JSON</button>
+        </div>
+      </div>
+
+      <!-- Tab 2: Ward Allocations Table -->
+      <div class="tab-pane" id="tab-allocations">
+        <div class="totals-summary-bar" id="totals-bar">
+          <!-- Populated via JS -->
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="allocations-table">
+            <thead>
+              <tr>
+                <th>Ward / Zone</th>
+                <th>HVI</th>
+                <th>Trees</th>
+                <th>Cool Roofs</th>
+                <th>Shades</th>
+                <th>Hydration</th>
+                <th>Cooling</th>
+                <th>Cost (₹L)</th>
+              </tr>
+            </thead>
+            <tbody id="allocations-table-body">
+              <!-- Populated via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 3: Comparison View -->
+      <div class="tab-pane" id="tab-comparison">
+        <div class="comparison-grid" id="comparison-grid">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+    </aside>
+  </main>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Custom App JS -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
