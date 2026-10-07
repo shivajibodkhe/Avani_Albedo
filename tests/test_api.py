@@ -133,3 +133,57 @@ def test_firebase_auth_and_admin_portal():
     })
     assert res_sett.status_code == 200
     assert res_sett.json()["config"]["gcp_project_id"] == "genai-2026-custom"
+
+def test_api_geographic_hierarchy():
+    res = client.get("/api/geography/countries-and-cities")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["default_country"] == "India"
+    assert data["default_city"] == "Bengaluru"
+    
+    country_names = [c["country"] for c in data["countries"]]
+    assert "India" in country_names
+    assert "United Arab Emirates" in country_names
+    assert "United States" in country_names
+
+    # Check India cities
+    india = next(c for c in data["countries"] if c["country"] == "India")
+    city_keys = [ct["key"] for ct in india["cities"]]
+    assert "Bengaluru" in city_keys
+    assert "Mumbai" in city_keys
+    assert "Delhi" in city_keys
+    assert "Hyderabad" in city_keys
+
+def test_multi_city_climate_cells_and_optimization():
+    # 1. Fetch Mumbai cells
+    res_bom = client.get("/api/cells?city=Mumbai")
+    assert res_bom.status_code == 200
+    bom_cells = res_bom.json()
+    assert len(bom_cells) == 6
+    assert any("Dharavi" in c["name"] for c in bom_cells)
+
+    # 2. Fetch Delhi cells
+    res_del = client.get("/api/cells?city=Delhi")
+    assert res_del.status_code == 200
+    del_cells = res_del.json()
+    assert len(del_cells) == 6
+    assert any("Chandni Chowk" in c["name"] for c in del_cells)
+
+    # 3. Optimize for Mumbai
+    res_opt_bom = client.post("/api/optimize", json={
+        "city": "Mumbai",
+        "budget_inr": 20000000.0,
+        "scenario_type": "optimized"
+    })
+    assert res_opt_bom.status_code == 200
+    opt_bom = res_opt_bom.json()
+    assert opt_bom["budget_spent_inr"] <= 20000000.0
+    assert opt_bom["avg_temp_reduction_c"] > 0.0
+
+    # 4. Compare for Delhi
+    res_cmp_del = client.get("/api/scenarios/compare?budget_inr=15000000.0&city=Delhi")
+    assert res_cmp_del.status_code == 200
+    cmp_del = res_cmp_del.json()
+    assert "scenarios" in cmp_del
+    assert "green_first" in cmp_del["scenarios"]
+

@@ -12,12 +12,18 @@ let interventionMarkerGroup;
 let selectedScenario = "optimized";
 let currentBudgetInr = 10000000.0; // 1 Crore default
 
-document.addEventListener("DOMContentLoaded", () => {
+// Geographic State (Cascading Country -> City)
+let geographicHierarchy = null;
+let currentSelectedCity = "Bengaluru";
+let currentSelectedCountry = "India";
+
+document.addEventListener("DOMContentLoaded", async () => {
   initMap();
   initEventHandlers();
   initAuth();
   loadSystemStatus();
-  loadClimateCells();
+  await loadGeographicHierarchy();
+  loadClimateCells(currentSelectedCity);
 });
 
 // ================= MAP INITIALIZATION =================
@@ -164,6 +170,21 @@ function initEventHandlers() {
     toggleKeyBtn.addEventListener('click', () => {
       const input = document.getElementById('admin-gemini-key');
       input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  }
+
+  // Target Geography Cascading Handlers
+  const countrySelect = document.getElementById('country-select');
+  if (countrySelect) {
+    countrySelect.addEventListener('change', (e) => {
+      onCountryChanged(e.target.value);
+    });
+  }
+
+  const citySelect = document.getElementById('city-select');
+  if (citySelect) {
+    citySelect.addEventListener('change', (e) => {
+      onCityChanged(e.target.value);
     });
   }
 }
@@ -517,9 +538,93 @@ async function loadSystemStatus() {
   }
 }
 
-async function loadClimateCells() {
+// ================= GEOGRAPHY (COUNTRY & CITY) LOGIC =================
+async function loadGeographicHierarchy() {
   try {
-    const res = await fetch('/api/cells');
+    const res = await fetch('/api/geography/countries-and-cities');
+    geographicHierarchy = await res.json();
+    populateCountryDropdown();
+  } catch (err) {
+    console.error("Failed to load geographic hierarchy", err);
+  }
+}
+
+function populateCountryDropdown() {
+  const countrySelect = document.getElementById('country-select');
+  if (!countrySelect || !geographicHierarchy) return;
+
+  countrySelect.innerHTML = '';
+  geographicHierarchy.countries.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.country;
+    opt.textContent = `${c.flag} ${c.country}`;
+    if (c.country === geographicHierarchy.default_country) {
+      opt.selected = true;
+    }
+    countrySelect.appendChild(opt);
+  });
+
+  currentSelectedCountry = geographicHierarchy.default_country;
+  populateCityDropdown(currentSelectedCountry);
+}
+
+function populateCityDropdown(countryName) {
+  const citySelect = document.getElementById('city-select');
+  if (!citySelect || !geographicHierarchy) return;
+
+  const countryObj = geographicHierarchy.countries.find(
+    c => c.country.toLowerCase() === countryName.toLowerCase()
+  );
+  if (!countryObj) return;
+
+  citySelect.innerHTML = '';
+  countryObj.cities.forEach(city => {
+    const opt = document.createElement('option');
+    opt.value = city.key;
+    opt.textContent = `${city.name} (${city.key})`;
+    if (city.key === geographicHierarchy.default_city) {
+      opt.selected = true;
+    }
+    citySelect.appendChild(opt);
+  });
+
+  currentSelectedCity = citySelect.value;
+}
+
+async function onCountryChanged(countryName) {
+  currentSelectedCountry = countryName;
+  populateCityDropdown(countryName);
+  const citySelect = document.getElementById('city-select');
+  if (citySelect && citySelect.value) {
+    await onCityChanged(citySelect.value);
+  }
+}
+
+async function onCityChanged(cityKey) {
+  currentSelectedCity = cityKey;
+  // Smooth camera flight to target city
+  let cityMeta = null;
+  if (geographicHierarchy) {
+    for (const c of geographicHierarchy.countries) {
+      const match = c.cities.find(ct => ct.key === cityKey);
+      if (match) {
+        cityMeta = match;
+        break;
+      }
+    }
+  }
+
+  if (cityMeta && map) {
+    map.flyTo(cityMeta.center, cityMeta.zoom, { duration: 1.5 });
+  }
+
+  // Reload climate cells and run optimization for the chosen city
+  await loadClimateCells(currentSelectedCity);
+}
+
+async function loadClimateCells(city = currentSelectedCity) {
+  try {
+    const res = await fetch(`/api/cells?city=${encodeURIComponent(city)}`);
     climateCells = await res.json();
     renderMapPolygons();
     // Auto-trigger default plan
@@ -536,14 +641,14 @@ async function runAvaniAgent() {
   
   btn.disabled = true;
   spinner.classList.remove('hidden');
-  btnText.textContent = "Synthesizing Prescriptive Plan...";
+  btnText.textContent = `Synthesizing Plan for ${currentSelectedCity}...`;
 
   try {
     const res = await fetch('/api/action-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        city: 'Bengaluru',
+        city: currentSelectedCity,
         budget_inr: currentBudgetInr,
         scenario_type: selectedScenario
       })
@@ -572,7 +677,7 @@ async function runAvaniAgent() {
 
 async function runComparison() {
   try {
-    const res = await fetch(`/api/scenarios/compare?budget_inr=${currentBudgetInr}`);
+    const res = await fetch(`/api/scenarios/compare?budget_inr=${currentBudgetInr}&city=${encodeURIComponent(currentSelectedCity)}`);
     const data = await res.json();
     renderComparisonGrid(data.scenarios);
     document.querySelector('[data-tab="tab-comparison"]').click();

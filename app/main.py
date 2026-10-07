@@ -15,6 +15,11 @@ from app.models.schemas import (
     LoginRequest, LoginResponse
 )
 from app.data.bengaluru_heat_data import get_bengaluru_climate_cells
+from app.data.cities_heat_data import (
+    get_geographic_hierarchy,
+    get_climate_cells_for_city,
+    CITIES_REGISTRY
+)
 from app.services.hvi_engine import calculate_hvi_for_cells
 from app.services.optimizer import solve_climate_interventions
 from app.services.gemini_agent import generate_action_plan
@@ -43,15 +48,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory cached dataset with computed HVI
-_CACHED_CELLS: List[ClimateCell] = []
+# In-memory cached dataset with computed HVI per city
+_CACHED_CELLS: Dict[str, List[ClimateCell]] = {}
 
-def get_cells() -> List[ClimateCell]:
+def get_cells(city: str = "Bengaluru") -> List[ClimateCell]:
     global _CACHED_CELLS
-    if not _CACHED_CELLS:
-        raw_cells = get_bengaluru_climate_cells()
-        _CACHED_CELLS = calculate_hvi_for_cells(raw_cells)
-    return _CACHED_CELLS
+    norm_city = city.strip()
+    if norm_city not in _CACHED_CELLS:
+        raw_cells = get_climate_cells_for_city(norm_city)
+        _CACHED_CELLS[norm_city] = calculate_hvi_for_cells(raw_cells)
+    return _CACHED_CELLS[norm_city]
 
 # Static Files Directory
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -84,10 +90,15 @@ def get_system_status():
         cells_loaded=len(cells)
     )
 
+@app.get("/api/geography/countries-and-cities")
+def list_geographic_hierarchy():
+    """Returns available countries, cities, and their coordinates/ward counts for cascading UI selection."""
+    return get_geographic_hierarchy()
+
 @app.get("/api/cells", response_model=List[ClimateCell])
-def list_climate_cells():
-    """Returns all climate cells with computed HVI and satellite indices."""
-    return get_cells()
+def list_climate_cells(city: str = Query("Bengaluru", description="City name to fetch climate cells for")):
+    """Returns all climate cells with computed HVI and satellite indices for a given city."""
+    return get_cells(city=city)
 
 @app.post("/api/optimize", response_model=ScenarioResult)
 def run_optimization(request: ScenarioRequest):
@@ -95,7 +106,8 @@ def run_optimization(request: ScenarioRequest):
     Solves the Prescriptive Climate Resilience problem using Google OR-Tools.
     Optimizes tree canopy, cool roofs, shade structures, and hydration stations.
     """
-    cells = get_cells()
+    target_city = request.city if request.city else "Bengaluru"
+    cells = get_cells(city=target_city)
     try:
         result = solve_climate_interventions(
             cells=cells,
@@ -115,7 +127,8 @@ def create_climate_action_plan(request: ScenarioRequest):
     to produce an explainable, budget-constrained municipal climate action plan.
     Also persists the generated scenario to Google Cloud Firestore (avani_scenarios).
     """
-    cells = get_cells()
+    target_city = request.city if request.city else "Bengaluru"
+    cells = get_cells(city=target_city)
     try:
         scenario_result = solve_climate_interventions(
             cells=cells,
@@ -142,12 +155,15 @@ def get_scenario_history(limit: int = Query(5, description="Number of recent pla
     }
 
 @app.get("/api/scenarios/compare")
-def compare_all_scenarios(budget_inr: float = Query(10000000.0, description="Budget in INR")):
+def compare_all_scenarios(
+    budget_inr: float = Query(10000000.0, description="Budget in INR"),
+    city: str = Query("Bengaluru", description="City to compare scenarios for")
+):
     """
     Computes and compares all 4 intervention scenarios side-by-side
     (Optimized, Green First, Albedo First, Public Health First).
     """
-    cells = get_cells()
+    cells = get_cells(city=city)
     scenario_types = ["optimized", "green_first", "albedo_first", "public_health_first"]
     results = {}
     
