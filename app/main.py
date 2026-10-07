@@ -1,6 +1,8 @@
 import logging
-from typing import List, Dict, Any
+import time
+from typing import List, Dict, Any, Optional
 from pathlib import Path
+from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -19,6 +21,7 @@ from app.services.gemini_agent import generate_action_plan
 from app.services.earth_engine_service import earth_engine_service
 from app.services.firestore_service import firestore_service
 from app.services.auth_service import auth_service
+from app.services.admin_service import admin_service
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -99,6 +102,7 @@ def run_optimization(request: ScenarioRequest):
             budget_inr=request.budget_inr,
             scenario_type=request.scenario_type
         )
+        admin_service.increment_metric("optimizer_runs")
         return result
     except Exception as e:
         logger.error(f"Optimization failed: {e}", exc_info=True)
@@ -119,6 +123,9 @@ def create_climate_action_plan(request: ScenarioRequest):
             scenario_type=request.scenario_type
         )
         action_plan = generate_action_plan(scenario_result, cells)
+        # Track Quota Metrics
+        admin_service.increment_metric("optimizer_runs")
+        admin_service.increment_metric("gemini_calls")
         # Persist to Firestore
         firestore_service.save_scenario_plan(action_plan.model_dump())
         return action_plan
@@ -190,3 +197,132 @@ def login_user(payload: LoginRequest):
         role=auth_result["role"],
         status="success"
     )
+
+# ================= ADMIN & FIREBASE AUTH ENDPOINTS =================
+class FirebaseLoginPayload(BaseModel):
+    email: str
+    token: Optional[str] = None
+    displayName: Optional[str] = None
+
+class AdminUserActionPayload(BaseModel):
+    email: str
+    action: str  # "approve", "suspend", "activate", "delete"
+
+class AdminAlertResolvePayload(BaseModel):
+    alert_id: str
+    action: str  # "approve", "reject"
+
+class AdminSettingsPayload(BaseModel):
+    gemini_api_key: Optional[str] = None
+    gcp_project_id: Optional[str] = None
+    use_earth_engine_live: Optional[bool] = None
+    allowed_emails: Optional[str] = None
+
+@app.post("/api/auth/firebase-login")
+def firebase_login_user(payload: FirebaseLoginPayload):
+    """
+    Firebase Authentication Handler:
+    - If user is approved: returns token and role.
+    - If user is suspended: rejects access with 403.
+    - If user is not registered: triggers an alert to Admin (srbodkhe@gmail.com)
+      and rejects access until approved by Admin.
+    """
+    email = payload.email.strip().lower()
+    user = admin_service.get_user(email)
+    
+    # 1. Unregistered user -> Trigger Admin Alert
+    if not user:
+        admin_service.trigger_registration_alert(
+            email=email,
+            details=f"Firebase login attempted by {payload.displayName or email}. Not yet registered on whitelist."
+        )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access Request Sent: Your Google/Firebase ID ({email}) is not yet registered. An alert has been sent to Super Admin (srbodkhe@gmail.com). You will receive access once approved."
+        )
+        
+    # 2. Suspended user
+    if user["status"] == "Suspended":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access Denied: The account for {email} has been suspended by the administrator."
+        )
+        
+    # 3. Pending user
+    if user["status"] == "Pending":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access Pending: Your registration for {email} is awaiting review and approval by the administrator."
+        )
+        
+    # 4. Active user
+    admin_service.add_or_update_user(email, role=user["role"], status="Active", provider="firebase/google")
+    token = f"firebase_{int(time.time())}_{email}"
+    return {
+        "status": "success",
+        "token": token,
+        "email": email,
+        "role": user["role"]
+    }
+
+@app.get("/api/admin/dashboard")
+def get_admin_dashboard(requester_email: Optional[str] = Query(None)):
+    """Returns users, alerts, quotas, and configuration for the Admin portal."""
+    return {
+        "status": "success",
+        "users": admin_service.list_users(),
+        "alerts": admin_service.list_alerts(),
+        "quotas": admin_service.get_quotas(),
+        "config": admin_service.get_runtime_config()
+    }
+
+@app.post("/api/admin/users/action")
+def perform_admin_user_action(payload: AdminUserActionPayload):
+    """Admin action to approve, suspend, activate, or delete a user."""
+    if payload.action == "delete":
+        success = admin_service.delete_user(payload.email)
+    elif payload.action in ("approve", "activate"):
+        success = admin_service.update_user_status(payload.email, "Active")
+    elif payload.action == "suspend":
+        success = admin_service.update_user_status(payload.email, "Suspended")
+    else:
+        raise HTTPException(status_code=400, detail="Invalid action")
+        
+    if not success:
+        raise HTTPException(status_code=400, detail="Action could not be completed.")
+        
+    return {
+        "status": "success",
+        "users": admin_service.list_users()
+    }
+
+@app.post("/api/admin/alerts/resolve")
+def resolve_admin_alert(payload: AdminAlertResolvePayload):
+    """Admin resolution of access requests and registration alerts."""
+    success = admin_service.resolve_alert(payload.alert_id, payload.action)
+    if not success:
+        raise HTTPException(status_code=404, detail="Alert not found.")
+    return {
+        "status": "success",
+        "alerts": admin_service.list_alerts(),
+        "users": admin_service.list_users()
+    }
+
+@app.post("/api/admin/settings")
+def update_admin_settings(payload: AdminSettingsPayload):
+    """Updates runtime API keys, project configuration, and whitelists."""
+    updates = {}
+    if payload.gemini_api_key is not None:
+        updates["gemini_api_key"] = payload.gemini_api_key
+    if payload.gcp_project_id is not None:
+        updates["gcp_project_id"] = payload.gcp_project_id
+    if payload.use_earth_engine_live is not None:
+        updates["use_earth_engine_live"] = payload.use_earth_engine_live
+    if payload.allowed_emails is not None:
+        updates["allowed_emails"] = payload.allowed_emails
+        
+    new_config = admin_service.update_runtime_config(updates)
+    return {
+        "status": "success",
+        "config": new_config
+    }

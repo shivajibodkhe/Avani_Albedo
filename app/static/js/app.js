@@ -131,6 +131,41 @@ function initEventHandlers() {
 
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+
+  // Firebase Google Login
+  const firebaseGoogleBtn = document.getElementById('firebase-google-btn');
+  if (firebaseGoogleBtn) firebaseGoogleBtn.addEventListener('click', handleFirebaseGoogleLogin);
+
+  // Admin Portal Trigger & Close
+  const openAdminBtn = document.getElementById('open-admin-btn');
+  if (openAdminBtn) openAdminBtn.addEventListener('click', openAdminModal);
+
+  const closeAdminBtn = document.getElementById('close-admin-btn');
+  if (closeAdminBtn) closeAdminBtn.addEventListener('click', closeAdminModal);
+
+  // Admin Tab Switching
+  document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.admin-tab-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      const pane = document.getElementById(btn.dataset.tab);
+      if (pane) pane.classList.add('active');
+    });
+  });
+
+  // Admin Settings Form
+  const adminSettingsForm = document.getElementById('admin-settings-form');
+  if (adminSettingsForm) adminSettingsForm.addEventListener('submit', handleSaveAdminSettings);
+
+  // Key Visibility Toggle
+  const toggleKeyBtn = document.getElementById('toggle-key-visibility');
+  if (toggleKeyBtn) {
+    toggleKeyBtn.addEventListener('click', () => {
+      const input = document.getElementById('admin-gemini-key');
+      input.type = input.type === 'password' ? 'text' : 'password';
+    });
+  }
 }
 
 // ================= AUTHENTICATION LOGIC =================
@@ -142,7 +177,6 @@ async function initAuth() {
     cachedAuthConfig = await res.json();
     
     if (!cachedAuthConfig.auth_enabled) {
-      // Auth disabled
       document.getElementById('login-modal-overlay').classList.add('hidden');
       return;
     }
@@ -151,10 +185,8 @@ async function initAuth() {
     const userEmail = localStorage.getItem('avani_email');
     
     if (token && userEmail) {
-      // User is already authenticated
       showAuthenticatedUser(userEmail);
     } else {
-      // Show login overlay
       document.getElementById('login-modal-overlay').classList.remove('hidden');
     }
   } catch (err) {
@@ -170,6 +202,9 @@ function showAuthenticatedUser(email) {
     userText.textContent = email;
     userPill.classList.remove('hidden');
   }
+
+  // Load admin alert count in background
+  checkAdminAlerts();
 }
 
 async function handleLoginSubmit(e) {
@@ -199,10 +234,52 @@ async function handleLoginSubmit(e) {
     localStorage.setItem('avani_email', data.email);
     showAuthenticatedUser(data.email);
   } catch (err) {
+    errorMsg.textContent = "Access Denied: Invalid credentials or email is not on the authorized whitelist.";
     errorMsg.classList.remove('hidden');
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = "Sign In to Decision Engine";
+  }
+}
+
+async function handleFirebaseGoogleLogin() {
+  const errorMsg = document.getElementById('login-error-msg');
+  errorMsg.classList.add('hidden');
+
+  // Prompt user for their Google / Firebase email
+  const enteredEmail = prompt(
+    "🔥 Sign in with Google (Firebase Auth)\n\nEnter your Google email address:",
+    "srbodkhe@gmail.com"
+  );
+
+  if (!enteredEmail) return;
+
+  try {
+    const res = await fetch('/api/auth/firebase-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: enteredEmail,
+        displayName: enteredEmail.split('@')[0],
+        token: `mock_firebase_token_${Date.now()}`
+      })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      // Unregistered or pending user - show alert notification
+      errorMsg.innerHTML = `<strong>⚠️ Registration Required:</strong><br>${data.detail || "An alert was sent to Super Admin (srbodkhe@gmail.com). You will receive access once approved."}`;
+      errorMsg.classList.remove('hidden');
+      return;
+    }
+
+    localStorage.setItem('avani_token', data.token);
+    localStorage.setItem('avani_email', data.email);
+    showAuthenticatedUser(data.email);
+  } catch (err) {
+    errorMsg.textContent = "Firebase Authentication Error. Check console.";
+    errorMsg.classList.remove('hidden');
   }
 }
 
@@ -213,7 +290,6 @@ function handleQuickJudgeLogin() {
   document.getElementById('login-email').value = defaultEmail;
   document.getElementById('login-password').value = defaultPw;
   
-  // Submit automatically
   document.getElementById('login-form').dispatchEvent(new Event('submit'));
 }
 
@@ -226,6 +302,209 @@ function handleLogout() {
   document.getElementById('login-error-msg').classList.add('hidden');
   document.getElementById('login-modal-overlay').classList.remove('hidden');
 }
+
+// ================= ADMIN PORTAL LOGIC =================
+async function checkAdminAlerts() {
+  try {
+    const res = await fetch('/api/admin/dashboard');
+    const data = await res.json();
+    const pendingAlerts = (data.alerts || []).filter(a => a.status === 'pending');
+    const badge = document.getElementById('admin-alert-badge');
+    const countTag = document.getElementById('admin-pending-count');
+    
+    if (badge) {
+      badge.textContent = pendingAlerts.length;
+      if (pendingAlerts.length > 0) badge.classList.remove('hidden');
+      else badge.classList.add('hidden');
+    }
+    if (countTag) countTag.textContent = pendingAlerts.length;
+  } catch (err) {
+    console.warn("Could not check admin alerts", err);
+  }
+}
+
+async function openAdminModal() {
+  const adminOverlay = document.getElementById('admin-modal-overlay');
+  adminOverlay.classList.remove('hidden');
+  await loadAdminDashboard();
+}
+
+function closeAdminModal() {
+  document.getElementById('admin-modal-overlay').classList.add('hidden');
+}
+
+async function loadAdminDashboard() {
+  try {
+    const res = await fetch('/api/admin/dashboard');
+    const data = await res.json();
+    
+    renderAdminAlerts(data.alerts || []);
+    renderAdminUsers(data.users || []);
+    renderAdminQuotas(data.quotas || {});
+    populateAdminSettings(data.config || {});
+  } catch (err) {
+    console.error("Failed loading admin dashboard", err);
+  }
+}
+
+function renderAdminAlerts(alerts) {
+  const container = document.getElementById('admin-alerts-container');
+  const pending = alerts.filter(a => a.status === 'pending');
+  
+  const countTag = document.getElementById('admin-pending-count');
+  if (countTag) countTag.textContent = pending.length;
+
+  if (pending.length === 0) {
+    container.innerHTML = `
+      <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #34d399;">
+        ✓ All user access requests are resolved. No pending alerts.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = pending.map(a => `
+    <div class="admin-alert-card">
+      <div class="alert-card-left">
+        <span class="alert-card-title">🚨 ${a.type}: <code>${a.user_email}</code></span>
+        <span class="alert-card-desc">${a.message}</span>
+      </div>
+      <div class="alert-actions">
+        <button class="btn-approve" onclick="resolveAdminAlert('${a.id}', 'approve')">✓ Approve User</button>
+        <button class="btn-reject" onclick="resolveAdminAlert('${a.id}', 'reject')">✕ Reject / Block</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAdminUsers(users) {
+  const tbody = document.getElementById('admin-users-table-body');
+  const countTag = document.getElementById('users-count-tag');
+  if (countTag) countTag.textContent = `${users.length} Registered Users`;
+
+  tbody.innerHTML = users.map(u => {
+    const statusClass = (u.status || 'active').toLowerCase();
+    const isSuperAdmin = u.email === 'srbodkhe@gmail.com';
+    return `
+      <tr>
+        <td><strong>${u.email}</strong> ${isSuperAdmin ? '👑' : ''}</td>
+        <td>${u.role}</td>
+        <td><span class="user-status-badge ${statusClass}">${u.status}</span></td>
+        <td><code>${u.provider || 'direct'}</code></td>
+        <td>${u.login_count || 1}</td>
+        <td>
+          ${isSuperAdmin ? '<span style="color: var(--text-dim); font-size: 11px;">Protected</span>' : `
+            ${u.status === 'Active' ? `
+              <button class="table-btn suspend" onclick="performAdminUserAction('${u.email}', 'suspend')">Suspend</button>
+            ` : `
+              <button class="table-btn activate" onclick="performAdminUserAction('${u.email}', 'activate')">Approve / Activate</button>
+            `}
+            <button class="table-btn" style="background: rgba(255,255,255,0.06); color: #fff;" onclick="performAdminUserAction('${u.email}', 'delete')">Remove</button>
+          `}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderAdminQuotas(quotas) {
+  const container = document.getElementById('admin-quotas-container');
+  container.innerHTML = Object.entries(quotas).map(([k, q]) => {
+    const pct = Math.min(100, Math.round((q.used / q.limit) * 100));
+    return `
+      <div class="quota-card">
+        <div class="quota-header">
+          <span class="quota-title">${q.label}</span>
+          <span class="quota-numbers">${q.used.toLocaleString()} / ${q.limit.toLocaleString()}</span>
+        </div>
+        <div class="quota-progress-track">
+          <div class="quota-progress-fill" style="width: ${pct}%;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim);">
+          <span>Used: ${pct}%</span>
+          <span>Available: ${(q.limit - q.used).toLocaleString()}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function populateAdminSettings(config) {
+  document.getElementById('admin-gcp-project').value = config.gcp_project_id || 'genai-2026';
+  document.getElementById('admin-allowed-emails').value = config.allowed_emails || 'srbodkhe@gmail.com, judge@hackathon.com';
+  document.getElementById('admin-earth-engine-toggle').checked = !!config.use_earth_engine_live;
+  
+  const keyNote = document.getElementById('gemini-key-status-note');
+  if (keyNote) {
+    keyNote.textContent = `Current: ${config.gemini_api_key_masked || 'Not Configured'}`;
+  }
+}
+
+async function handleSaveAdminSettings(e) {
+  e.preventDefault();
+  const geminiKey = document.getElementById('admin-gemini-key').value.trim();
+  const gcpProject = document.getElementById('admin-gcp-project').value.trim();
+  const allowedEmails = document.getElementById('admin-allowed-emails').value.trim();
+  const eeToggle = document.getElementById('admin-earth-engine-toggle').checked;
+  const savedMsg = document.getElementById('settings-saved-msg');
+
+  const payload = {
+    gcp_project_id: gcpProject,
+    allowed_emails: allowedEmails,
+    use_earth_engine_live: eeToggle
+  };
+  if (geminiKey) payload.gemini_api_key = geminiKey;
+
+  try {
+    const res = await fetch('/api/admin/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (res.ok) {
+      savedMsg.classList.remove('hidden');
+      setTimeout(() => savedMsg.classList.add('hidden'), 3500);
+      await loadAdminDashboard();
+    }
+  } catch (err) {
+    alert("Could not update settings: " + err);
+  }
+}
+
+// Global actions exposed for inline table onclick
+window.performAdminUserAction = async function(email, action) {
+  try {
+    const res = await fetch('/api/admin/users/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, action })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      renderAdminUsers(data.users || []);
+    }
+  } catch (err) {
+    alert("User action error: " + err);
+  }
+};
+
+window.resolveAdminAlert = async function(alertId, action) {
+  try {
+    const res = await fetch('/api/admin/alerts/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: alertId, action })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      renderAdminAlerts(data.alerts || []);
+      renderAdminUsers(data.users || []);
+      checkAdminAlerts();
+    }
+  } catch (err) {
+    alert("Alert resolve error: " + err);
+  }
+};
 async function loadSystemStatus() {
   try {
     const res = await fetch('/api/status');
