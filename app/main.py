@@ -9,7 +9,8 @@ from fastapi.responses import FileResponse
 from app.config import settings
 from app.models.schemas import (
     ClimateCell, ScenarioRequest, ScenarioResult,
-    ActionPlanResponse, SystemStatusResponse
+    ActionPlanResponse, SystemStatusResponse,
+    LoginRequest, LoginResponse
 )
 from app.data.bengaluru_heat_data import get_bengaluru_climate_cells
 from app.services.hvi_engine import calculate_hvi_for_cells
@@ -17,6 +18,7 @@ from app.services.optimizer import solve_climate_interventions
 from app.services.gemini_agent import generate_action_plan
 from app.services.earth_engine_service import earth_engine_service
 from app.services.firestore_service import firestore_service
+from app.services.auth_service import auth_service
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -162,3 +164,29 @@ def compare_all_scenarios(budget_inr: float = Query(10000000.0, description="Bud
         "budget_inr": budget_inr,
         "scenarios": results
     }
+
+@app.get("/api/auth/config")
+def get_auth_config():
+    """Returns auth requirement status and demo credentials hint."""
+    return {
+        "auth_enabled": auth_service.is_auth_enabled,
+        "allowed_emails": auth_service.allowed_emails,
+        "default_judge_email": "judge@hackathon.com",
+        "default_judge_password": auth_service.judge_password
+    }
+
+@app.post("/api/auth/login", response_model=LoginResponse)
+def login_user(payload: LoginRequest):
+    """Authenticates judges or whitelisted users against the access policy."""
+    auth_result = auth_service.authenticate_user(payload.email, payload.password)
+    if not auth_result:
+        raise HTTPException(
+            status_code=401,
+            detail="Access Denied: Invalid credentials or email is not on the authorized whitelist."
+        )
+    return LoginResponse(
+        token=auth_result["token"],
+        email=auth_result["email"],
+        role=auth_result["role"],
+        status="success"
+    )

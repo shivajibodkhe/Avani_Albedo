@@ -47,3 +47,35 @@ def test_api_compare():
     assert "scenarios" in data
     assert "optimized" in data["scenarios"]
     assert "green_first" in data["scenarios"]
+
+def test_api_auth():
+    # 1. Config
+    res_cfg = client.get("/api/auth/config")
+    assert res_cfg.status_code == 200
+    cfg = res_cfg.json()
+    assert "auth_enabled" in cfg
+    assert "default_judge_email" in cfg
+
+    # 2. Valid Login for judge
+    res_valid = client.post("/api/auth/login", json={
+        "email": "judge@hackathon.com",
+        "password": "avani2026"
+    })
+    assert res_valid.status_code == 200
+    data = res_valid.json()
+    assert data["status"] == "success"
+    assert "token" in data
+
+    # 3. Invalid Login (wrong password)
+    res_invalid_pw = client.post("/api/auth/login", json={
+        "email": "judge@hackathon.com",
+        "password": "wrongpassword"
+    })
+    assert res_invalid_pw.status_code == 401
+
+    # 4. Invalid Login (unauthorized email)
+    res_invalid_email = client.post("/api/auth/login", json={
+        "email": "intruder@stranger.org",
+        "password": "avani2026"
+    })
+    assert res_invalid_email.status_code == 401

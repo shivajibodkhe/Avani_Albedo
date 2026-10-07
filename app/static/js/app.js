@@ -15,6 +15,7 @@ let currentBudgetInr = 10000000.0; // 1 Crore default
 document.addEventListener("DOMContentLoaded", () => {
   initMap();
   initEventHandlers();
+  initAuth();
   loadSystemStatus();
   loadClimateCells();
 });
@@ -120,9 +121,111 @@ function initEventHandlers() {
 
   // Export JSON
   document.getElementById('export-json-btn').addEventListener('click', exportPlanJson);
+
+  // Auth Form & Quick Judge Handlers
+  const loginForm = document.getElementById('login-form');
+  if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
+
+  const quickJudgeBtn = document.getElementById('quick-judge-btn');
+  if (quickJudgeBtn) quickJudgeBtn.addEventListener('click', handleQuickJudgeLogin);
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
 }
 
-// ================= API CALLS =================
+// ================= AUTHENTICATION LOGIC =================
+let cachedAuthConfig = null;
+
+async function initAuth() {
+  try {
+    const res = await fetch('/api/auth/config');
+    cachedAuthConfig = await res.json();
+    
+    if (!cachedAuthConfig.auth_enabled) {
+      // Auth disabled
+      document.getElementById('login-modal-overlay').classList.add('hidden');
+      return;
+    }
+
+    const token = localStorage.getItem('avani_token');
+    const userEmail = localStorage.getItem('avani_email');
+    
+    if (token && userEmail) {
+      // User is already authenticated
+      showAuthenticatedUser(userEmail);
+    } else {
+      // Show login overlay
+      document.getElementById('login-modal-overlay').classList.remove('hidden');
+    }
+  } catch (err) {
+    console.warn("Auth config check error:", err);
+  }
+}
+
+function showAuthenticatedUser(email) {
+  document.getElementById('login-modal-overlay').classList.add('hidden');
+  const userPill = document.getElementById('auth-user-pill');
+  const userText = document.getElementById('auth-user-email');
+  if (userPill && userText) {
+    userText.textContent = email;
+    userPill.classList.remove('hidden');
+  }
+}
+
+async function handleLoginSubmit(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+  const errorMsg = document.getElementById('login-error-msg');
+  const submitBtn = document.getElementById('login-submit-btn');
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Verifying Access...";
+  errorMsg.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+
+    if (!res.ok) {
+      throw new Error("Invalid credentials or email not on whitelist");
+    }
+
+    const data = await res.json();
+    localStorage.setItem('avani_token', data.token);
+    localStorage.setItem('avani_email', data.email);
+    showAuthenticatedUser(data.email);
+  } catch (err) {
+    errorMsg.classList.remove('hidden');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Sign In to Decision Engine";
+  }
+}
+
+function handleQuickJudgeLogin() {
+  const defaultEmail = (cachedAuthConfig && cachedAuthConfig.default_judge_email) || "judge@hackathon.com";
+  const defaultPw = (cachedAuthConfig && cachedAuthConfig.default_judge_password) || "avani2026";
+  
+  document.getElementById('login-email').value = defaultEmail;
+  document.getElementById('login-password').value = defaultPw;
+  
+  // Submit automatically
+  document.getElementById('login-form').dispatchEvent(new Event('submit'));
+}
+
+function handleLogout() {
+  localStorage.removeItem('avani_token');
+  localStorage.removeItem('avani_email');
+  document.getElementById('auth-user-pill').classList.add('hidden');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error-msg').classList.add('hidden');
+  document.getElementById('login-modal-overlay').classList.remove('hidden');
+}
 async function loadSystemStatus() {
   try {
     const res = await fetch('/api/status');

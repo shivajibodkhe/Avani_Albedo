@@ -38,6 +38,11 @@
         <span class="status-dot"></span>
         <span id="system-status-text">Connecting to Climate Engine...</span>
       </div>
+      <div class="user-pill hidden" id="auth-user-pill">
+        <span class="user-icon">👤</span>
+        <span id="auth-user-email">judge@hackathon.com</span>
+        <button id="logout-btn" class="logout-btn" title="Sign out">✕</button>
+      </div>
       <a href="https://github.com/shivajibodkhe/Avani_Albedo" target="_blank" rel="noreferrer" class="github-link" title="View Source on GitHub">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
@@ -291,6 +296,52 @@
 
     </aside>
   </main>
+
+  <!-- Judge & Evaluator Auth Login Modal -->
+  <div class="modal-overlay hidden" id="login-modal-overlay">
+    <div class="login-modal-card">
+      <div class="login-modal-header">
+        <div class="login-badge-icon">🔐</div>
+        <h2>Access Restricted</h2>
+        <p class="login-subtitle">Avani Albedo Prescriptive Climate Decision Engine</p>
+      </div>
+
+      <div class="judge-access-notice">
+        <strong>⚖️ Hackathon Evaluation Access:</strong>
+        <p>Judges and authorized evaluators can log in using their credentials or use the 1-click evaluation access button below.</p>
+      </div>
+
+      <form id="login-form" class="login-form">
+        <div class="form-group">
+          <label for="login-email">Authorized Gmail / Hackathon ID</label>
+          <input type="email" id="login-email" class="form-control" placeholder="judge@hackathon.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+        </div>
+
+        <div class="login-error-msg hidden" id="login-error-msg">
+          Access Denied: Invalid password or email is not on the authorized whitelist.
+        </div>
+
+        <button type="submit" class="primary-btn login-submit-btn" id="login-submit-btn">
+          Sign In to Decision Engine
+        </button>
+
+        <div class="login-divider"><span>OR DEMO EVALUATION</span></div>
+
+        <button type="button" class="quick-judge-btn" id="quick-judge-btn">
+          ⚡ 1-Click Quick Demo Login as Judge
+        </button>
+      </form>
+
+      <div class="login-whitelist-footer">
+        <span>Authorized Whitelist: <code>srbodkhe@gmail.com</code>, <code>judge@hackathon.com</code></span>
+      </div>
+    </div>
+  </div>
 
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

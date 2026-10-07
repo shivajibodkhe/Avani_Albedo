@@ -115,3 +115,13 @@ class SystemStatusResponse(BaseModel):
     bigquery_status: str
     firestore_status: str = "Ready (avani_scenarios)"
     cells_loaded: int
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+class LoginResponse(BaseModel):
+    token: str
+    email: str
+    role: str
+    status: str = "success"
