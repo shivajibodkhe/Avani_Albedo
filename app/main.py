@@ -16,6 +16,7 @@ from app.services.hvi_engine import calculate_hvi_for_cells
 from app.services.optimizer import solve_climate_interventions
 from app.services.gemini_agent import generate_action_plan
 from app.services.earth_engine_service import earth_engine_service
+from app.services.firestore_service import firestore_service
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -74,6 +75,7 @@ def get_system_status():
         gemini_model="Vertex AI Gemini 2.5 Flash",
         earth_engine_status=earth_engine_service.get_status(),
         bigquery_status="Ready (avani_climate GEOGRAPHY schema)",
+        firestore_status=firestore_service.get_status(),
         cells_loaded=len(cells)
     )
 
@@ -105,6 +107,7 @@ def create_climate_action_plan(request: ScenarioRequest):
     """
     Runs OR-Tools optimization and invokes the Vertex AI / Gemini planning agent
     to produce an explainable, budget-constrained municipal climate action plan.
+    Also persists the generated scenario to Google Cloud Firestore (avani_scenarios).
     """
     cells = get_cells()
     try:
@@ -114,10 +117,20 @@ def create_climate_action_plan(request: ScenarioRequest):
             scenario_type=request.scenario_type
         )
         action_plan = generate_action_plan(scenario_result, cells)
+        # Persist to Firestore
+        firestore_service.save_scenario_plan(action_plan.model_dump())
         return action_plan
     except Exception as e:
         logger.error(f"Action plan generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/scenarios/history")
+def get_scenario_history(limit: int = Query(5, description="Number of recent plans to fetch")):
+    """Returns recently generated and stored scenarios from Google Cloud Firestore."""
+    return {
+        "status": "success",
+        "recent_plans": firestore_service.list_recent_plans(limit=limit)
+    }
 
 @app.get("/api/scenarios/compare")
 def compare_all_scenarios(budget_inr: float = Query(10000000.0, description="Budget in INR")):

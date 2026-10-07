@@ -113,4 +113,5 @@ class SystemStatusResponse(BaseModel):
     gemini_model: str
     earth_engine_status: str
     bigquery_status: str
+    firestore_status: str = "Ready (avani_scenarios)"
     cells_loaded: int
