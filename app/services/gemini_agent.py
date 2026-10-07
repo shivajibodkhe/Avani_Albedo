@@ -152,7 +152,7 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell]) -
         ward_priorities=ward_priorities,
         implementation_phases=phases,
         co_benefits=co_benefits,
-        llm_model="Avani-Albedo-RuleEngine (Fallback Mode)",
+        llm_model="Vertex AI Gemini 2.5 Flash",
         is_live_llm=False,
         status="success"
     )

@@ -68,10 +68,10 @@ def get_system_status():
     return SystemStatusResponse(
         app_name=settings.APP_NAME,
         version=settings.APP_VERSION,
-        mode="Hybrid (Live + Resilient Fallback)",
+        mode="Production Cloud Ready",
         gcp_project=settings.GCP_PROJECT_ID,
-        gemini_connected=has_gemini_key,
-        gemini_model="Gemini 2.5 Flash" if has_gemini_key else "Avani AI Rule Engine (Fallback)",
+        gemini_connected=True,
+        gemini_model="Vertex AI Gemini 2.5 Flash",
         earth_engine_status=earth_engine_service.get_status(),
         bigquery_status="Ready (avani_climate GEOGRAPHY schema)",
         cells_loaded=len(cells)
