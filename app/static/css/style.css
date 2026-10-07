@@ -379,6 +379,12 @@ body.dark-theme {
 #gis-map {
   width: 100%;
   height: 100%;
+  background-color: #0a0e1a;
+}
+
+/* OpenStreetMap Dark Filter: Zero API Key, Zero Watermark, 100% Free */
+.dark-osm-tiles {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.2) brightness(0.7);
 }
 
 /* Map Legend */

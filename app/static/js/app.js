@@ -26,11 +26,35 @@ function initMap() {
     attributionControl: false
   }).setView([12.9716, 77.5946], 11);
 
-  // CartoDB Dark Matter Basemap Tiles
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  // 1. Sleek Dark Canvas (OpenStreetMap with dark CSS filter - 100% Free, No Watermark, No Key)
+  const darkLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    subdomains: 'abcd',
-  }).addTo(map);
+    className: 'dark-osm-tiles',
+    attribution: '&copy; OpenStreetMap'
+  });
+
+  // 2. High-Resolution Satellite View (Esri World Imagery - 100% Free, No Watermark, No Key)
+  const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri'
+  });
+
+  // 3. Clean Street Map
+  const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  });
+
+  // Add default dark layer
+  darkLayer.addTo(map);
+
+  // Basemap Switcher Control (Top Right)
+  const baseLayers = {
+    "🌙 Dark Canvas": darkLayer,
+    "🛰️ Satellite Imagery": satelliteLayer,
+    "🗺️ Clean Streets": streetLayer
+  };
+  L.control.layers(baseLayers, null, { position: 'topright' }).addTo(map);
 
   heatPolygonGroup = L.layerGroup().addTo(map);
   assetsMarkerGroup = L.layerGroup().addTo(map);
