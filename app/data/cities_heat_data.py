@@ -940,6 +940,22 @@ def get_temperature_timeline(city_name: str, cell_id: Optional[str] = None) -> T
             alert_level=alert
         ))
 
+    # Ambient 2-meter Air Temperature (Weather Station / AccuWeather counterpart)
+    # Physical basis: Air temperature in shaded Stevenson screen is 8C - 13C cooler than
+    # physical asphalt/tin roof Land Surface Temperature (LST) radiating under direct solar flux.
+    air_offset = 11.3
+    air_high = round(peak_lst - air_offset, 1)
+    air_low = round(base_min - 6.0, 1)
+    air_cooling_delta = round(cooling_delta * 0.65, 1) # Air cools ~65% of surface cooling delta
+    
+    air_baseline_curve = []
+    air_cooled_curve = []
+    for w in solar_weights:
+        a_temp = round(air_low + (air_high - air_low) * w, 1)
+        a_cool = round(a_temp - (air_cooling_delta * (0.35 + 0.65 * w)), 1)
+        air_baseline_curve.append(a_temp)
+        air_cooled_curve.append(a_cool)
+
     # Calculate hours above 38°C (hazardous duration)
     hazard_hours = 8.5 if peak_lst >= 42.0 else (6.0 if peak_lst >= 39.0 else 4.0)
 
@@ -957,7 +973,14 @@ def get_temperature_timeline(city_name: str, cell_id: Optional[str] = None) -> T
         diurnal_hours=diurnal_hours,
         baseline_temp_c=baseline_curve,
         cooled_temp_c=cooled_curve,
-        forecast_7days=forecast
+        forecast_7days=forecast,
+        air_temp_high_c=air_high,
+        air_temp_low_c=air_low,
+        air_temp_cooled_c=round(air_high - air_cooling_delta, 1),
+        air_baseline_temp_c=air_baseline_curve,
+        air_cooled_temp_c=air_cooled_curve,
+        lst_vs_air_delta_c=round(peak_lst - air_high, 1),
+        season_note="Peak Summer Heatwave Baseline (April/May) vs 2m Ambient Air Temp (Weather App)"
     )
 
 

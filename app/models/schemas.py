@@ -227,6 +227,13 @@ class TemperatureTimelineResponse(BaseModel):
     baseline_temp_c: List[float]
     cooled_temp_c: List[float]
     forecast_7days: List[DayForecast]
+    air_temp_high_c: Optional[float] = None
+    air_temp_low_c: Optional[float] = None
+    air_temp_cooled_c: Optional[float] = None
+    air_baseline_temp_c: Optional[List[float]] = None
+    air_cooled_temp_c: Optional[List[float]] = None
+    lst_vs_air_delta_c: Optional[float] = None
+    season_note: Optional[str] = "Peak Summer Heatwave Baseline (April/May) vs 2m Ambient Air Temp"
 
 class SystemStatusResponse(BaseModel):
     app_name: str

@@ -22,6 +22,8 @@ let selectedWardId = null;
 // Chart Instances
 let diurnalChartInstance = null;
 let wardMicroChartInstance = null;
+let currentTempSensorMode = "lst"; // 'lst' (satellite surface skin) or 'air' (ambient weather station)
+let currentTimelineData = null;
 
 // Multi-Currency & Global Economics State
 let currentCurrency = "INR";
@@ -217,8 +219,29 @@ function initEventHandlers() {
       tab.classList.add('active');
       const targetPane = document.getElementById(tab.dataset.tab);
       if (targetPane) targetPane.classList.add('active');
+
+      if (tab.dataset.tab === 'tab-timeline') {
+        loadTemperatureTimeline(currentSelectedCity, selectedWardId);
+        loadHeatCalendar(currentSelectedCity);
+        setTimeout(() => {
+          if (diurnalChartInstance) {
+            diurnalChartInstance.resize();
+            diurnalChartInstance.update();
+          }
+        }, 60);
+      } else if (tab.dataset.tab === 'tab-comparison') {
+        runComparison();
+      }
     });
   });
+
+  // Temperature Sensor Mode Toggle (LST vs Shaded Air Temp)
+  const btnLst = document.getElementById('temp-mode-btn-lst');
+  const btnAir = document.getElementById('temp-mode-btn-air');
+  if (btnLst && btnAir) {
+    btnLst.addEventListener('click', () => setTemperatureSensorMode("lst"));
+    btnAir.addEventListener('click', () => setTemperatureSensorMode("air"));
+  }
 
   // Close inspector button
   document.getElementById('close-inspector').addEventListener('click', () => {
@@ -838,7 +861,11 @@ async function onCountryChanged(countryName) {
 
 async function onCityChanged(cityKey) {
   currentSelectedCity = cityKey;
+  selectedWardId = null;
   populateWardDropdown(cityKey);
+
+  const wardSelect = document.getElementById('ward-select');
+  if (wardSelect) wardSelect.value = "ALL";
 
   // Smooth camera flight to target city
   let cityMeta = null;
@@ -862,9 +889,11 @@ async function onCityChanged(cityKey) {
     }
   }
 
-  // Reload climate cells and run optimization for the chosen city
+  // Reload climate cells, timeline, calendar, and spot evaluations for the chosen city
   await loadClimateCells(currentSelectedCity);
-  loadTemperatureTimeline(currentSelectedCity, null);
+  await loadTemperatureTimeline(currentSelectedCity, null);
+  await loadHeatCalendar(currentSelectedCity);
+  await loadSpotPhaseEvaluation(currentSelectedCity, null);
   loadTimelapseData(currentSelectedCity);
 }
 
@@ -911,8 +940,13 @@ async function runAvaniAgent() {
     renderAllocationsTable(currentScenarioResult);
     renderInterventionMarkers(currentScenarioResult);
     
-    // Switch to Plan tab
-    document.querySelector('[data-tab="tab-plan"]').click();
+    // Switch to Plan tab ONLY IF user is currently on tab-plan or initially loading
+    const activeTab = document.querySelector('.tab-btn.active');
+    const isPlanActive = !activeTab || activeTab.dataset.tab === 'tab-plan';
+    if (isPlanActive) {
+      const planBtn = document.querySelector('[data-tab="tab-plan"]');
+      if (planBtn) planBtn.click();
+    }
   } catch (err) {
     console.error("Action plan generation error:", err);
     alert("Could not generate action plan. Check console for details.");
@@ -924,54 +958,136 @@ async function runAvaniAgent() {
 }
 
 // ================= TEMPERATURE TIMELINE & CHARTS =================
+function setTemperatureSensorMode(mode) {
+  currentTempSensorMode = mode;
+  const btnLst = document.getElementById('temp-mode-btn-lst');
+  const btnAir = document.getElementById('temp-mode-btn-air');
+  const statusPill = document.getElementById('temp-mode-status-pill');
+  const explainNote = document.getElementById('temp-explainability-note');
+
+  if (mode === "air") {
+    if (btnLst) {
+      btnLst.style.background = "transparent";
+      btnLst.style.color = "#94a3b8";
+    }
+    if (btnAir) {
+      btnAir.style.background = "#38bdf8";
+      btnAir.style.color = "#020617";
+    }
+    if (statusPill) {
+      statusPill.textContent = "🌤️ 2-Meter Shaded Air Temperature (Weather App / Stevenson Screen)";
+      statusPill.style.color = "#38bdf8";
+      statusPill.style.background = "rgba(56, 189, 248, 0.15)";
+      statusPill.style.borderColor = "rgba(56, 189, 248, 0.3)";
+    }
+    if (explainNote) {
+      explainNote.innerHTML = `<strong style="color: #38bdf8;">🌤️ Ambient Air Temperature Mode:</strong> Reflects standard meteorological weather station records measured in a shaded Stevenson screen 2 meters above ground. Surface materials (asphalt, concrete) can be <b>+10°C to +14°C hotter</b> than this value under peak direct sunlight!`;
+    }
+  } else {
+    if (btnLst) {
+      btnLst.style.background = "var(--color-orange)";
+      btnLst.style.color = "#020617";
+    }
+    if (btnAir) {
+      btnAir.style.background = "transparent";
+      btnAir.style.color = "#94a3b8";
+    }
+    if (statusPill) {
+      statusPill.textContent = "🛰️ Peak Land Surface Temperature (Landsat 8/9 TIRS Band 10)";
+      statusPill.style.color = "#f43f5e";
+      statusPill.style.background = "rgba(244, 63, 94, 0.15)";
+      statusPill.style.borderColor = "rgba(244, 63, 94, 0.3)";
+    }
+    if (explainNote) {
+      const peakVal = currentTimelineData ? currentTimelineData.peak_high_c.toFixed(1) : '42.8';
+      const airVal = currentTimelineData && currentTimelineData.air_temp_high_c ? currentTimelineData.air_temp_high_c.toFixed(1) : '31.5';
+      explainNote.innerHTML = `<strong style="color: #38bdf8;">💡 Why Surface Temp (${peakVal}°C) differs from AccuWeather Air Temp (${airVal}°C):</strong> AccuWeather reports <i>2-meter shaded air temperature</i>. Landsat 8/9 satellite thermal radiometers measure the literal <i>radiometric surface skin</i> of asphalt & concrete roofs absorbing direct solar radiation (∼950 W/m²), which heats up <b>10°C–12°C hotter than ambient air</b>. Cool roofs block this surface heating directly!`;
+    }
+  }
+
+  if (currentTimelineData) {
+    renderTemperatureTimelineView(currentTimelineData);
+  }
+}
+
 async function loadTemperatureTimeline(city, wardId) {
   try {
     const url = `/api/temperature-timeline?city=${encodeURIComponent(city)}${wardId ? `&cell_id=${encodeURIComponent(wardId)}` : ''}`;
     const res = await fetch(url);
+    if (!res.ok) return;
     const data = await res.json();
-
-    const areaBadge = document.getElementById('timeline-area-badge');
-    if (areaBadge) areaBadge.textContent = data.ward_name ? `${data.ward_name} (${city})` : `${city} Metropolitan Average`;
-
-    const hazardBadge = document.getElementById('timeline-hazard-badge');
-    if (hazardBadge) hazardBadge.textContent = `Hazardous Hours: ${data.heat_hazard_duration_hours}h/day`;
-
-    const peakEl = document.getElementById('timeline-peak-temp');
-    if (peakEl) peakEl.textContent = `${data.peak_high_c.toFixed(1)} °C`;
-
-    const peakTimeEl = document.getElementById('timeline-peak-time');
-    if (peakTimeEl) peakTimeEl.textContent = data.peak_time;
-
-    const lowEl = document.getElementById('timeline-low-temp');
-    if (lowEl) lowEl.textContent = `${data.low_temp_c.toFixed(1)} °C`;
-
-    const lowTimeEl = document.getElementById('timeline-low-time');
-    if (lowTimeEl) lowTimeEl.textContent = data.low_time;
-
-    const cooledEl = document.getElementById('timeline-cooled-temp');
-    if (cooledEl) {
-      const cooledPeak = data.cooled_temp_c[data.diurnal_hours.indexOf("14:00")] || (data.peak_high_c - data.cooling_delta_c);
-      cooledEl.textContent = `${cooledPeak.toFixed(1)} °C`;
-    }
-
-    const dropEl = document.getElementById('timeline-mitigation-drop');
-    if (dropEl) dropEl.textContent = `-${data.cooling_delta_c.toFixed(1)} °C Peak Mitigation`;
-
-    const alertEl = document.getElementById('timeline-alert-level');
-    if (alertEl) {
-      const activeAlert = data.forecast_7days[0]?.alert_level || "Normal";
-      alertEl.textContent = activeAlert;
-      if (activeAlert.includes("Red")) alertEl.className = "kpi-value red";
-      else if (activeAlert.includes("Orange")) alertEl.className = "kpi-value orange";
-      else if (activeAlert.includes("Yellow")) alertEl.className = "kpi-value yellow";
-      else alertEl.className = "kpi-value emerald";
-    }
-
-    renderDiurnalChart(data);
-    renderForecastCards(data.forecast_7days);
+    currentTimelineData = data;
+    renderTemperatureTimelineView(data);
   } catch (err) {
     console.error("Failed to load temperature timeline", err);
   }
+}
+
+function renderTemperatureTimelineView(data) {
+  if (!data) return;
+  const isAirMode = currentTempSensorMode === "air";
+
+  const areaBadge = document.getElementById('timeline-area-badge');
+  if (areaBadge) areaBadge.textContent = data.ward_name ? `${data.ward_name} (${data.city})` : `${data.city} Metropolitan Average`;
+
+  const hazardBadge = document.getElementById('timeline-hazard-badge');
+  if (hazardBadge) {
+    hazardBadge.textContent = isAirMode 
+      ? `AccuWeather Baseline: ${(data.air_temp_high_c || (data.peak_high_c - 11.3)).toFixed(1)}°C`
+      : `Hazardous Hours: ${data.heat_hazard_duration_hours}h/day`;
+  }
+
+  const peakEl = document.getElementById('timeline-peak-temp');
+  if (peakEl) {
+    const val = isAirMode ? (data.air_temp_high_c ?? (data.peak_high_c - 11.3)) : data.peak_high_c;
+    peakEl.textContent = `${val.toFixed(1)} °C`;
+  }
+
+  const peakTimeEl = document.getElementById('timeline-peak-time');
+  if (peakTimeEl) {
+    peakTimeEl.textContent = isAirMode ? "14:00 (Shaded 2m Air Peak)" : `${data.peak_time} (Solar Skin Peak)`;
+  }
+
+  const lowEl = document.getElementById('timeline-low-temp');
+  if (lowEl) {
+    const val = isAirMode ? (data.air_temp_low_c ?? (data.low_temp_c - 4.7)) : data.low_temp_c;
+    lowEl.textContent = `${val.toFixed(1)} °C`;
+  }
+
+  const lowTimeEl = document.getElementById('timeline-low-time');
+  if (lowTimeEl) {
+    lowTimeEl.textContent = isAirMode ? "06:00 (Pre-Dawn Air Low)" : `${data.low_time} (Surface Skin Min)`;
+  }
+
+  const cooledEl = document.getElementById('timeline-cooled-temp');
+  if (cooledEl) {
+    if (isAirMode) {
+      const airCooled = data.air_temp_cooled_c ?? ((data.air_temp_high_c ?? 31.5) - (data.cooling_delta_c * 0.45));
+      cooledEl.textContent = `${airCooled.toFixed(1)} °C`;
+    } else {
+      const cooledPeak = data.cooled_temp_c[data.diurnal_hours.indexOf("14:00")] || (data.peak_high_c - data.cooling_delta_c);
+      cooledEl.textContent = `${cooledPeak.toFixed(1)} °C`;
+    }
+  }
+
+  const dropEl = document.getElementById('timeline-mitigation-drop');
+  if (dropEl) {
+    const drop = isAirMode ? (data.cooling_delta_c * 0.45) : data.cooling_delta_c;
+    dropEl.textContent = `-${drop.toFixed(1)} °C Mitigation Drop`;
+  }
+
+  const alertEl = document.getElementById('timeline-alert-level');
+  if (alertEl) {
+    const activeAlert = data.forecast_7days[0]?.alert_level || "Normal";
+    alertEl.textContent = activeAlert;
+    if (activeAlert.includes("Red")) alertEl.className = "kpi-value red";
+    else if (activeAlert.includes("Orange")) alertEl.className = "kpi-value orange";
+    else if (activeAlert.includes("Yellow")) alertEl.className = "kpi-value yellow";
+    else alertEl.className = "kpi-value emerald";
+  }
+
+  renderDiurnalChart(data);
+  renderForecastCards(data.forecast_7days, isAirMode, data.lst_vs_air_delta_c || 11.3);
 }
 
 function renderDiurnalChart(data) {
@@ -982,6 +1098,22 @@ function renderDiurnalChart(data) {
     diurnalChartInstance.destroy();
   }
 
+  const isAirMode = currentTempSensorMode === "air";
+  const delta = data.lst_vs_air_delta_c || 11.3;
+
+  const baselineData = isAirMode 
+    ? (data.air_baseline_temp_c || data.baseline_temp_c.map(v => Number((v - delta).toFixed(1))))
+    : data.baseline_temp_c;
+
+  const cooledData = isAirMode 
+    ? (data.air_cooled_temp_c || data.cooled_temp_c.map(v => Number((v - (delta * 0.85)).toFixed(1))))
+    : data.cooled_temp_c;
+
+  const baselineLabel = isAirMode ? 'Ambient Shaded Air Temp (°C)' : 'Baseline Surface LST (°C)';
+  const cooledLabel = isAirMode ? 'Air Temp with Avani Interventions (°C)' : 'Surface LST with Avani Albedo (°C)';
+  const baselineColor = isAirMode ? '#38bdf8' : '#f43f5e';
+  const baselineBg = isAirMode ? 'rgba(56, 189, 248, 0.12)' : 'rgba(244, 63, 94, 0.12)';
+
   const ctx = canvas.getContext('2d');
   diurnalChartInstance = new Chart(ctx, {
     type: 'line',
@@ -989,20 +1121,20 @@ function renderDiurnalChart(data) {
       labels: data.diurnal_hours,
       datasets: [
         {
-          label: 'Baseline Surface Temp (°C)',
-          data: data.baseline_temp_c,
-          borderColor: '#f43f5e',
-          backgroundColor: 'rgba(244, 63, 94, 0.12)',
+          label: baselineLabel,
+          data: baselineData,
+          borderColor: baselineColor,
+          backgroundColor: baselineBg,
           fill: true,
           tension: 0.35,
           borderWidth: 2.5,
-          pointBackgroundColor: '#f43f5e',
+          pointBackgroundColor: baselineColor,
           pointRadius: 4,
           pointHoverRadius: 6
         },
         {
-          label: 'With Avani Albedo (°C)',
-          data: data.cooled_temp_c,
+          label: cooledLabel,
+          data: cooledData,
           borderColor: '#10b981',
           backgroundColor: 'rgba(16, 185, 129, 0.12)',
           fill: true,
@@ -1048,9 +1180,12 @@ function renderDiurnalChart(data) {
   });
 }
 
-function renderForecastCards(forecast) {
+function renderForecastCards(forecast, isAirMode = false, deltaC = 11.3) {
   const container = document.getElementById('forecast-cards-container');
   if (!container || !forecast) return;
+
+  const airOffset = isAirMode ? deltaC : 0;
+  const lowAirOffset = isAirMode ? (deltaC * 0.4) : 0;
 
   container.innerHTML = forecast.map(f => {
     let badgeColor = '#10b981';
@@ -1066,13 +1201,18 @@ function renderForecastCards(forecast) {
       badgeBg = 'rgba(234, 179, 8, 0.2)';
     }
 
+    const dispHigh = Number((f.high_c - airOffset).toFixed(1));
+    const dispLow = Number((f.low_c - lowAirOffset).toFixed(1));
+    const dispMitigated = Number((f.mitigated_high_c - airOffset).toFixed(1));
+    const coolingDrop = Number((dispHigh - dispMitigated).toFixed(1));
+
     return `
       <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 4px; text-align: center;">
         <div style="font-size: 11px; font-weight: 700; color: #f8fafc;">${f.day}</div>
         <div style="font-size: 9px; color: var(--text-dim); margin-bottom: 4px;">${f.date}</div>
-        <div style="font-size: 14px; font-weight: 800; color: #f43f5e;">${f.high_c}°</div>
-        <div style="font-size: 11px; color: #64748b;">${f.low_c}°</div>
-        <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-top: 2px;">-${(f.high_c - f.mitigated_high_c).toFixed(1)}° ❄️</div>
+        <div style="font-size: 14px; font-weight: 800; color: ${isAirMode ? '#38bdf8' : '#f43f5e'};">${dispHigh}°</div>
+        <div style="font-size: 11px; color: #64748b;">${dispLow}°</div>
+        <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-top: 2px;">-${coolingDrop > 0 ? coolingDrop : 1.2}° ❄️</div>
         <div style="margin-top: 4px; display: inline-block; font-size: 8px; font-weight: 700; color: ${badgeColor}; background: ${badgeBg}; padding: 1px 4px; border-radius: 3px;">
           ${f.alert_level.replace('Alert', '').trim()}
         </div>
