@@ -13,7 +13,8 @@ from app.models.schemas import (
     ClimateCell, ScenarioRequest, ScenarioResult,
     ActionPlanResponse, SystemStatusResponse,
     LoginRequest, LoginResponse, TemperatureTimelineResponse,
-    CityTimelapseResponse
+    CityTimelapseResponse, SpotEvaluationSummary, HeatCalendarSummary,
+    TwentyYearArchiveResponse
 )
 from app.data.bengaluru_heat_data import get_bengaluru_climate_cells
 from app.data.cities_heat_data import (
@@ -21,6 +22,9 @@ from app.data.cities_heat_data import (
     get_climate_cells_for_city,
     get_temperature_timeline,
     get_city_timelapse_data,
+    get_spot_phase_evaluation,
+    get_city_heat_calendar,
+    get_twenty_year_satellite_archive,
     CITIES_REGISTRY
 )
 from app.services.hvi_engine import calculate_hvi_for_cells
@@ -136,9 +140,14 @@ def create_climate_action_plan(request: ScenarioRequest):
         scenario_result = solve_climate_interventions(
             cells=cells,
             budget_inr=request.budget_inr,
-            scenario_type=request.scenario_type
+            scenario_type=request.scenario_type,
+            city=target_city
         )
-        action_plan = generate_action_plan(scenario_result, cells, persona=request.persona)
+        action_plan = generate_action_plan(
+            scenario_result, cells,
+            persona=request.persona,
+            selected_ward_id=request.selected_ward_id
+        )
         # Track Quota Metrics
         admin_service.increment_metric("optimizer_runs")
         admin_service.increment_metric("gemini_calls")
@@ -148,6 +157,36 @@ def create_climate_action_plan(request: ScenarioRequest):
     except Exception as e:
         logger.error(f"Action plan generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/phases/spot-evaluation", response_model=SpotEvaluationSummary)
+def get_spot_evaluation_endpoint(
+    city: str = Query("Bengaluru", description="Target city name"),
+    ward_id: Optional[str] = Query(None, description="Target ward/spot ID"),
+    budget_inr: float = Query(10000000.0, description="Budget in INR")
+):
+    """
+    Evaluates Phase 1, Phase 2, and Phase 3 interventions for a specific geographic spot/ward.
+    Returns physical suitability ratings and mathematical recommendation.
+    """
+    return get_spot_phase_evaluation(city_name=city, ward_id=ward_id, budget_inr=budget_inr)
+
+@app.get("/api/heat-calendar", response_model=HeatCalendarSummary)
+def get_heat_calendar_endpoint(
+    city: str = Query("Bengaluru", description="Target city name")
+):
+    """
+    Returns 12-month thermal curve, peak heatwave alert window, and actionable precaution timeline.
+    """
+    return get_city_heat_calendar(city_name=city)
+
+@app.get("/api/history/20yr-archive", response_model=TwentyYearArchiveResponse)
+def get_20yr_archive_endpoint(
+    city: str = Query("Bengaluru", description="Target city name")
+):
+    """
+    Returns 20-year satellite radiometric archive (2005 - 2025) across Landsat 5/7/8/9 and Sentinel-2.
+    """
+    return get_twenty_year_satellite_archive(city_name=city)
 
 @app.get("/api/temperature-timeline", response_model=TemperatureTimelineResponse)
 def get_temperature_timeline_data(
@@ -190,7 +229,7 @@ def compare_all_scenarios(
     results = {}
     
     for s_type in scenario_types:
-        res = solve_climate_interventions(cells, budget_inr=budget_inr, scenario_type=s_type)
+        res = solve_climate_interventions(cells, budget_inr=budget_inr, scenario_type=s_type, city=city)
         results[s_type] = {
             "title": res.scenario_title,
             "budget_spent_lakhs": res.budget_spent_lakhs,

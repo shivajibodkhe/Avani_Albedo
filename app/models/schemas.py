@@ -126,6 +126,68 @@ class ImplementationPhase(BaseModel):
     key_milestones: List[str]
     estimated_spend_inr: float
 
+class PhaseSpotEvaluation(BaseModel):
+    phase_id: str
+    phase_title: str
+    timeline: str
+    focus_interventions: List[str]
+    cooling_impact_c: float
+    land_requirement: str
+    speed: str
+    suitability_score_pct: int
+    suitability_rating: str
+    is_recommended_best: bool
+    rationale: str
+
+class SpotEvaluationSummary(BaseModel):
+    ward_id: str
+    ward_name: str
+    city: str
+    built_density_pct: int
+    unbuilt_pct: int
+    peak_lst: float
+    hvi_score: float
+    recommended_phase_id: str
+    recommended_phase_name: str
+    why_recommended: str
+    phases: List[PhaseSpotEvaluation]
+
+class HeatwaveMonthRisk(BaseModel):
+    month: str
+    month_num: int
+    high_lst: float
+    status: str
+    action_note: str
+
+class HeatCalendarSummary(BaseModel):
+    city: str
+    country: str
+    peak_heatwave_window: str
+    precaution_prep_window: str
+    planting_window: str
+    emergency_threshold_c: float
+    months: List[HeatwaveMonthRisk] = []
+    advisories: List[str] = []
+
+class TwentyYearRecord(BaseModel):
+    year: int
+    avg_lst_c: float
+    heat_anomaly_c: float
+    trees_lost_cumulative: int
+    ndvi: float
+    built_up_fraction: float
+    satellite_sensor: str
+    observation_date: str
+
+class TwentyYearArchiveResponse(BaseModel):
+    city: str
+    archive_span: str = "2005 - 2025 (20 Years)"
+    total_temp_rise_c: float
+    total_trees_lost_20yr: int
+    built_up_surge_pct: float
+    records: List[TwentyYearRecord]
+    data_availability_summary: str
+
 class ActionPlanResponse(BaseModel):
     scenario_result: ScenarioResult
     executive_summary: str
@@ -138,6 +200,8 @@ class ActionPlanResponse(BaseModel):
     co_benefits: List[str]
     llm_model: str
     is_live_llm: bool
+    spot_phase_evaluation: Optional[SpotEvaluationSummary] = None
+    heat_calendar: Optional[HeatCalendarSummary] = None
     status: str = "success"
 
 class DayForecast(BaseModel):

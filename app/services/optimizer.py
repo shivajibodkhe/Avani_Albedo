@@ -20,7 +20,8 @@ COOLING_PER_HYDRATION = 0.005    # Thermal relief index proxy
 def solve_climate_interventions(
     cells: List[ClimateCell],
     budget_inr: float = 10000000.0,
-    scenario_type: str = "optimized"
+    scenario_type: str = "optimized",
+    city: str = "Bengaluru"
 ) -> ScenarioResult:
     """
     Solves the Prescriptive Climate Resilience Mixed-Integer Linear Program using Google OR-Tools SCIP solver.
@@ -219,7 +220,7 @@ def solve_climate_interventions(
     return ScenarioResult(
         scenario_type=scenario_type,
         scenario_title=titles.get(scenario_type, "Custom Climate Intervention Plan"),
-        city="Bengaluru",
+        city=city,
         total_budget_inr=budget_inr,
         budget_spent_inr=round(total_spent, 2),
         budget_remaining_inr=round(max(0.0, budget_inr - total_spent), 2),

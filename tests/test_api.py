@@ -279,3 +279,33 @@ def test_historical_timelapse_and_land_feasibility():
         assert "land_feasibility_summary" in plan
 
 
+def test_spot_phase_evaluation_and_calendar_endpoints():
+    # 1. Spot Phase Evaluation
+    res = client.get("/api/phases/spot-evaluation?city=Bengaluru&ward_id=BLR_001")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["ward_id"] == "BLR_001"
+    assert "recommended_phase_id" in data
+    assert len(data["phases"]) == 3
+    assert any(p["is_recommended_best"] for p in data["phases"])
+
+    # 2. Monthly Heat Calendar
+    res_cal = client.get("/api/heat-calendar?city=Bengaluru")
+    assert res_cal.status_code == 200
+    cal = res_cal.json()
+    assert "peak_heatwave_window" in cal
+    assert "precaution_prep_window" in cal
+    assert "planting_window" in cal
+    assert len(cal["months"]) == 12
+
+    # 3. 20-Year Satellite Archive
+    res_20yr = client.get("/api/history/20yr-archive?city=Bengaluru")
+    assert res_20yr.status_code == 200
+    arch = res_20yr.json()
+    assert len(arch["records"]) == 5
+    assert arch["records"][0]["year"] == 2005
+    assert arch["records"][-1]["year"] == 2025
+    assert arch["total_temp_rise_c"] > 0
+
+
+

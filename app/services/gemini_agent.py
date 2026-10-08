@@ -1,27 +1,120 @@
 import json
 import logging
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from app.config import settings
 from app.models.schemas import (
     ClimateCell, ScenarioResult, ActionPlanResponse,
     WardPriority, ImplementationPhase
 )
+from app.data.cities_heat_data import (
+    CITIES_REGISTRY, get_spot_phase_evaluation, get_city_heat_calendar
+)
 
 logger = logging.getLogger("avani_albedo.gemini")
 
-def build_prompt_context(scenario: ScenarioResult, cells: List[ClimateCell], persona: str = "Municipal Commissioner") -> str:
+def _get_city_metadata(city_name: str) -> Dict[str, Any]:
+    target_key = "Bengaluru"
+    for k in CITIES_REGISTRY.keys():
+        if k.lower() in city_name.lower() or city_name.lower() in k.lower():
+            target_key = k
+            break
+    meta = CITIES_REGISTRY.get(target_key, CITIES_REGISTRY["Bengaluru"])
+    country = meta.get("country", "India")
+    
+    # Botanical species tailored to climate zone
+    if "United Arab Emirates" in country:
+        trees = "Ghaf (Prosopis cineraria), Date Palm (Phoenix dactylifera), and Sidr (Ziziphus spina-christi)"
+        policy = "UAE Climate-Proof Cities 2030 & Estidama Pearl Green Building Standard"
+        agency = "Dubai Municipality Climate Action Directorate"
+    elif "United States" in country:
+        trees = "Blue Palo Verde (Parkinsonia florida), Velvet Mesquite (Prosopis velutina), and Desert Ironwood (Olneya tesota)"
+        policy = "Federal Extreme Heat Resilience Framework & OSHA Heat Safety Standards"
+        agency = "City Heat Response & Mitigation Office"
+    elif "United Kingdom" in country:
+        trees = "London Plane (Platanus acerifolia), English Oak (Quercus robur), and Silver Birch (Betula pendula)"
+        policy = "London Environment Strategy & Urban Greening Factor (UGF)"
+        agency = "Greater London Authority Climate Adaptation Team"
+    elif "Singapore" in country:
+        trees = "Rain Tree (Samanea saman), Yellow Flame (Peltophorum pterocarpum), and Angsana (Pterocarpus indicus)"
+        policy = "Singapore Green Plan 2030 & Skyrise Greenery Incentive Scheme"
+        agency = "National Parks Board (NParks) & PUB Urban Drainage"
+    else:
+        trees = "Neem (Azadirachta indica), Honge (Pongamia pinnata), and Peepal (Ficus religiosa)"
+        policy = "National Heat Action Plan (NDMA) & Municipal Disaster Management Protocols"
+        agency = "Bruhat Bengaluru Mahanagara Palike (BBMP) Climate Wing"
+
+    return {
+        "city_name": meta.get("name", city_name),
+        "country": country,
+        "currency": meta.get("currency", "INR"),
+        "currency_symbol": meta.get("currency_symbol", "₹"),
+        "usd_rate": meta.get("usd_rate", 0.012),
+        "trees": trees,
+        "policy": policy,
+        "agency": agency
+    }
+
+def _format_budget_text(amount_local: float, meta: Dict[str, Any]) -> str:
+    sym = meta["currency_symbol"]
+    rate = meta["usd_rate"]
+    usd_val = amount_local * rate
+    
+    if meta["currency"] == "INR":
+        if amount_local >= 10000000:
+            cr = amount_local / 10000000
+            usd_k = usd_val / 1000
+            return f"₹{cr:.2f} Cr (${usd_k:.1f}k USD)"
+        else:
+            lakh = amount_local / 100000
+            usd_k = usd_val / 1000
+            return f"₹{lakh:.1f} Lakhs (${usd_k:.1f}k USD)"
+    elif meta["currency"] == "USD":
+        if amount_local >= 1000000:
+            return f"${amount_local/1000000:.2f}M USD"
+        return f"${amount_local/1000:.1f}k USD"
+    else:
+        if amount_local >= 1000000:
+            return f"{sym}{amount_local/1000000:.2f}M (${usd_val/1000000:.2f}M USD)"
+        return f"{sym}{amount_local/1000:.1f}k (${usd_val/1000:.1f}k USD)"
+
+def build_prompt_context(
+    scenario: ScenarioResult,
+    cells: List[ClimateCell],
+    persona: str = "Municipal Commissioner",
+    selected_ward_id: Optional[str] = None
+) -> str:
     """Prepares structured summary for the Gemini prompt."""
     cell_lookup = {c.cell_id: c for c in cells}
     top_allocations = sorted(scenario.allocations, key=lambda x: x.total_cost, reverse=True)[:5]
+    meta = _get_city_metadata(scenario.city)
     
+    selected_ward_data = None
+    if selected_ward_id and selected_ward_id in cell_lookup:
+        sw = cell_lookup[selected_ward_id]
+        selected_ward_data = {
+            "ward_id": sw.cell_id,
+            "ward_name": sw.name,
+            "lst_c": sw.lst,
+            "hvi_score": sw.hvi_score,
+            "built_density": sw.built_density,
+            "population": sw.population,
+            "schools": sw.assets.schools,
+            "hospitals": sw.assets.hospitals
+        }
+
     context = {
         "city": scenario.city,
+        "country": meta["country"],
+        "currency": meta["currency"],
+        "native_tree_species": meta["trees"],
+        "local_policy": meta["policy"],
         "persona": persona,
+        "selected_spot": selected_ward_data,
         "scenario_type": scenario.scenario_type,
         "scenario_title": scenario.scenario_title,
         "budget_allocated_inr": scenario.total_budget_inr,
         "budget_spent_inr": scenario.budget_spent_inr,
-        "budget_spent_lakhs": scenario.budget_spent_lakhs,
+        "budget_formatted": _format_budget_text(scenario.budget_spent_inr, meta),
         "avg_temp_reduction_c": scenario.avg_temp_reduction_c,
         "max_temp_reduction_c": scenario.max_temp_reduction_c,
         "total_beneficiaries": scenario.total_beneficiaries,
@@ -46,14 +139,21 @@ def build_prompt_context(scenario: ScenarioResult, cells: List[ClimateCell], per
     }
     return json.dumps(context, indent=2)
 
-def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], persona: str = "Municipal Commissioner") -> ActionPlanResponse:
+def generate_fallback_plan(
+    scenario: ScenarioResult,
+    cells: List[ClimateCell],
+    persona: str = "Municipal Commissioner",
+    selected_ward_id: Optional[str] = None
+) -> ActionPlanResponse:
     """
     Expert Prescriptive Climate Intelligence Fallback:
     Provides a guaranteed, error-free, mathematically grounded action plan
-    tailored to the selected decision-maker persona.
+    tailored to the selected decision-maker persona, city geography, native flora, and specific spot.
     """
     cell_lookup = {c.cell_id: c for c in cells}
     sorted_allocs = sorted(scenario.allocations, key=lambda x: (x.hvi_score, x.total_cost), reverse=True)
+    meta = _get_city_metadata(scenario.city)
+    budget_txt = _format_budget_text(scenario.budget_spent_inr, meta)
     
     # Identify top priority wards
     ward_priorities: List[WardPriority] = []
@@ -61,7 +161,7 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], p
         c = cell_lookup.get(alloc.cell_id)
         interventions_summary = []
         if alloc.trees > 0:
-            interventions_summary.append(f"{alloc.trees} Native Trees")
+            interventions_summary.append(f"{alloc.trees} Climate-Resilient Trees ({meta['trees'].split(',')[0].strip()})")
         if alloc.cool_roof_sqft > 0:
             interventions_summary.append(f"{alloc.cool_roof_sqft:,} sq ft High-Albedo Roofs")
         if alloc.shade_structures > 0:
@@ -69,10 +169,11 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], p
         if alloc.hydration_stations > 0:
             interventions_summary.append(f"{alloc.hydration_stations} Solar Hydration Kiosks")
             
+        cost_txt = _format_budget_text(alloc.total_cost, meta)
         justification = (
             f"{alloc.cell_name} exhibits an HVI score of {alloc.hvi_score} ({alloc.hvi_category}). "
             f"With surface temperatures reaching {c.lst if c else 40}°C and {c.assets.schools if c else 10} schools, "
-            f"this targeted ₹{round(alloc.total_cost / 100000, 2)}L intervention delivers an estimated {alloc.cooling_reduction_c}°C "
+            f"this targeted {cost_txt} intervention delivers an estimated {alloc.cooling_reduction_c}°C "
             f"localized thermal drop protecting {alloc.beneficiaries:,} citizens."
         )
         
@@ -85,14 +186,12 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], p
             justification=justification
         ))
         
-    # Phased Implementation Roadmap - Guaranteed non-zero realistic capital phasing
+    # Phased Implementation Roadmap
     spent = scenario.budget_spent_inr if scenario.budget_spent_inr > 0 else scenario.total_budget_inr
     p1_raw = (scenario.total_shades * 120000.0) + (scenario.total_hydration * 80000.0)
     p2_raw = scenario.total_cool_roof_sqft * 45.0
     p3_raw = scenario.total_trees * 3000.0
 
-    # If any phase is 0 (e.g., Green-First where roofs/shades are 0, or Albedo-First where trees are 0),
-    # smoothly distribute total investment across a 22% / 48% / 30% municipal tranche model
     if p1_raw <= 0 or p2_raw <= 0 or p3_raw <= 0:
         p1_spend = round(spent * 0.22, 2)
         p2_spend = round(spent * 0.48, 2)
@@ -105,11 +204,11 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], p
     phases = [
         ImplementationPhase(
             phase="Phase 1: Rapid Heat-Wave Relief",
-            timeline="Months 1 - 2 (Pre-Monsoon)",
+            timeline="Months 1 - 2 (Pre-Heatwave Window)",
             key_milestones=[
-                f"Deploy {max(1, scenario.total_hydration)} solar-powered public hydration stations at transit hubs",
+                f"Deploy {max(1, scenario.total_hydration)} solar-powered public hydration stations across high-density transit nodes",
                 f"Install {max(1, scenario.total_shades)} reflective tensile shade canopies near pedestrian choke points",
-                "Community heat awareness signage & emergency cooling dispatch"
+                f"Enact targeted early heat alerts compliant with {meta['policy']}"
             ],
             estimated_spend_inr=p1_spend
         ),
@@ -117,89 +216,118 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], p
             phase="Phase 2: Albedo Surface Modification",
             timeline="Months 3 - 5",
             key_milestones=[
-                f"Apply high-reflectance (SRI > 104) elastomeric coating across {max(50000, scenario.total_cool_roof_sqft):,} sq ft of municipal & commercial roofs",
+                f"Apply high-reflectance (SRI > 104) elastomeric coating across {max(50000, scenario.total_cool_roof_sqft):,} sq ft of roofs",
                 "Thermal imaging drone audit before & after roof application",
-                "Baseline albedo elevation from 0.15 to > 0.72 verified via Landsat calibration"
+                "Baseline albedo elevation from 0.15 to > 0.72 verified via Landsat 9 / Sentinel-2 calibration"
             ],
             estimated_spend_inr=p2_spend
         ),
         ImplementationPhase(
             phase="Phase 3: Urban Forestry & Canopy Expansion",
-            timeline="Months 6 - 12 (Monsoon Planting)",
+            timeline="Months 6 - 12 (Optimal Planting Window)",
             key_milestones=[
-                f"Plant and fence {max(100, scenario.total_trees):,} drought-resilient native canopy species (Neem, Honge, Mahua)",
+                f"Plant and fence {max(100, scenario.total_trees):,} drought-resilient native canopy species: {meta['trees']}",
                 "Establish 24-month survival geo-tagging and soil moisture telemetry",
-                "Long-term ambient cooling monitoring via BigQuery geospatial tracking"
+                "Long-term ambient cooling monitoring via Google Cloud BigQuery geospatial tracking"
             ],
             estimated_spend_inr=p3_spend
         )
     ]
     
+    # Specific targeted spot directive if user selected a ward
+    selected_ward_obj = None
+    if selected_ward_id and selected_ward_id in cell_lookup:
+        selected_ward_obj = cell_lookup[selected_ward_id]
+    
+    spot_prefix = ""
+    if selected_ward_obj:
+        built_pct = int(selected_ward_obj.built_density * 100)
+        unbuilt_pct = max(4, 100 - built_pct)
+        if built_pct >= 80:
+            spot_rec = (
+                f"🎯 Selected Hotspot Directive ({selected_ward_obj.name}): Peak LST is {selected_ward_obj.lst}°C with {built_pct}% concrete coverage. "
+                f"Because ground soil is scarce ({unbuilt_pct}%), Phase 1 cool roof retrofits are mathematically prioritized—yielding immediate -2.3°C relief without requiring ground soil footprint."
+            )
+        else:
+            spot_rec = (
+                f"🎯 Selected Hotspot Directive ({selected_ward_obj.name}): High permeable unbuilt land available ({unbuilt_pct}%). "
+                f"Prioritize Phase 3 native tree clusters ({meta['trees'].split(',')[0]}) to maximize permanent evapotranspirative cooling."
+            )
+    else:
+        spot_rec = f"🎯 Primary Hotspot Focus: Direct Phase 1 emergency cooling assets to {sorted_allocs[0].cell_name} (HVI: {sorted_allocs[0].hvi_score}, LST: {sorted_allocs[0].lst if hasattr(sorted_allocs[0], 'lst') else 41.5}°C)."
+
     # Persona-tailored recommendations & summary
     if "health" in persona.lower() or "medical" in persona.lower():
         strategic_recommendations = [
+            spot_rec,
             f"Pre-position IV saline, cold packs, and oral rehydration packs across health centers in {sorted_allocs[0].cell_name} (HVI: {sorted_allocs[0].hvi_score}).",
-            "Mobilize ASHA and frontline workers for mandatory home checks on vulnerable seniors and infants during 12:00–16:00 peak hours.",
+            f"Mobilize frontline healthcare workers for mandatory home checks on vulnerable seniors and infants under {meta['policy']}.",
             "Commission wet-bulb globe temperature (WBGT) real-time warning sirens and misting stations near major transit stops.",
             "Establish syndromic heatstroke surveillance across hospitals linked directly to the municipal emergency dashboard."
         ]
         exec_summary = (
-            f"Public Health Climate Resilience Plan for {scenario.city}. Prioritizes safeguarding {scenario.total_beneficiaries:,} citizens "
-            f"from acute thermal distress and heatstroke. OR-Tools SCIP optimization directs ₹{scenario.budget_spent_lakhs}L toward critical wards, "
+            f"Public Health Climate Resilience Plan for {scenario.city} ({meta['country']}). Prioritizes safeguarding {scenario.total_beneficiaries:,} citizens "
+            f"from acute thermal distress and heatstroke. OR-Tools SCIP optimization directs {budget_txt} toward critical wards, "
             f"installing {scenario.total_hydration} hydration kiosks and {scenario.total_shades} shade points to lower hotspot exposure by {scenario.heat_exposure_reduction_pct}%."
         )
     elif "planner" in persona.lower() or "infrastructure" in persona.lower():
         strategic_recommendations = [
-            f"Mandate Solar Reflectance Index (SRI) ≥ 82 for all commercial building permits and municipal re-roofing projects.",
-            f"Establish continuous 50-meter cool vegetative corridors connecting peripheral greens to {sorted_allocs[0].cell_name}.",
+            spot_rec,
+            f"Mandate Solar Reflectance Index (SRI) ≥ 82 for all commercial building permits and municipal re-roofing projects in {scenario.city}.",
+            f"Establish continuous cool vegetative corridors connecting peripheral greens to {sorted_allocs[0].cell_name} utilizing native {meta['trees']}.",
             "Incorporate permeable cool-pavement standards for all new pedestrian pathways and parking facilities.",
-            "Embed ward Heat Vulnerability Indices (HVI) into municipal zoning master plans as a mandatory environmental gate."
+            f"Embed ward Heat Vulnerability Indices (HVI) into municipal zoning master plans under {meta['policy']}."
         ]
         exec_summary = (
-            f"Urban Infrastructure & Planning Directive for {scenario.city}. Optimizes municipal built form across {len(scenario.allocations)} wards. "
+            f"Urban Infrastructure & Planning Directive for {scenario.city} ({meta['country']}). Optimizes municipal built form across {len(scenario.allocations)} wards. "
             f"Allocates {scenario.total_cool_roof_sqft:,} sq ft of high-albedo cool roofs and {scenario.total_trees:,} canopy trees "
-            f"delivering an average -{scenario.avg_temp_reduction_c}°C cooling with ₹{scenario.budget_spent_lakhs}L investment."
+            f"delivering an average -{scenario.avg_temp_reduction_c}°C cooling with {budget_txt} investment."
         )
     elif "disaster" in persona.lower() or "emergency" in persona.lower():
         strategic_recommendations = [
-            f"Trigger Level-3 Heatwave Emergency Protocol: deploy mobile water tankers to top transit hubs between 11:00 AM and 4:00 PM.",
-            "Designate 25 air-conditioned municipal facilities and public libraries as 24/7 public cooling sanctuaries during Orange/Red alerts.",
+            spot_rec,
+            f"Trigger Level-3 Heatwave Emergency Protocol across {scenario.city}: deploy mobile water tankers to top transit hubs between 11:00 AM and 4:00 PM.",
+            f"Designate air-conditioned municipal facilities and public libraries as 24/7 public cooling sanctuaries during extreme heat warnings.",
             "Broadcast targeted early-morning cell broadcast SMS warnings to vulnerable ward residents before 09:00 AM.",
             "Enforce mandatory suspension of outdoor construction labor from 12:00 PM to 3:30 PM on forecasted peak heat days."
         ]
         exec_summary = (
-            f"Heatwave Emergency Response & Disaster Action Plan for {scenario.city}. Deploys rapid life-saving cooling infrastructure "
+            f"Heatwave Emergency Response & Disaster Action Plan for {scenario.city} ({meta['country']}). Deploys rapid life-saving cooling infrastructure "
             f"with {scenario.total_hydration} solar hydration stations and {scenario.total_shades} transit canopies to shield {scenario.total_beneficiaries:,} people."
         )
     else: # Default: Municipal Commissioner
         strategic_recommendations = [
-            f"Enact municipal cool roof mandate for commercial & public roofs across {scenario.city} to lock in albedo > 0.70.",
-            "Authorize Public-Private Partnership (PPP) tenders for rapid solar hydration kiosk deployment financed via green municipal bonds.",
-            "Integrate Avani Albedo HVI telemetry directly into the Integrated Command & Control Centre (ICCC) for real-time monitoring.",
-            f"Reinvest projected 14% peak electricity savings from {scenario.total_cool_roof_sqft:,} sq ft cool roofs into urban forestry endowment."
+            spot_rec,
+            f"Enact municipal cool roof mandate across {scenario.city} to lock in albedo > 0.70 across all commercial & civic roofs.",
+            f"Plant {max(100, scenario.total_trees):,} drought-tolerant native canopy trees ({meta['trees']}) with smart drip irrigation telemetry.",
+            f"Authorize Public-Private Partnership (PPP) tenders for rapid solar hydration kiosk deployment under {meta['policy']}.",
+            f"Reinvest projected 14% peak electricity savings from {scenario.total_cool_roof_sqft:,} sq ft cool roofs into the municipal resilience fund."
         ]
         exec_summary = (
-            f"Executive Municipal Climate Action Plan for {scenario.city}. Prepared for the Municipal Commissioner. "
-            f"Under an allocated budget of ₹{scenario.total_budget_inr/100000:.1f} Lakhs, the OR-Tools SCIP solver optimizes ₹{scenario.budget_spent_lakhs}L "
+            f"Executive Municipal Climate Action Plan for {scenario.city} ({meta['country']}). Prepared for the Municipal Commissioner. "
+            f"Under an allocated budget of {budget_txt}, the OR-Tools SCIP solver optimizes capital allocation "
             f"across {len(scenario.allocations)} wards, achieving -{scenario.avg_temp_reduction_c}°C average cooling (up to -{scenario.max_temp_reduction_c}°C in hotspots) "
             f"protecting {scenario.total_beneficiaries:,} citizens."
         )
     
     rationale = (
         f"The prescriptive allocation prioritizes high Heat Vulnerability Index (HVI) wards where land surface temperature (LST) "
-        f"exceeds the 40°C threshold and vegetation deficits are severe. "
-        f"By pairing high-albedo roof retrofits (which deliver immediate thermal barrier reduction) with deep canopy planting "
-        f"and transit hydration kiosks, the plan maximizes thermodynamic cooling efficiency per rupee spent while protecting "
-        f"vulnerable populations around {sum(c.assets.schools for c in cells)} schools and {sum(c.assets.hospitals for c in cells)} healthcare hubs."
+        f"exceeds critical thresholds and vegetation deficits are severe. "
+        f"By pairing high-albedo roof retrofits (which deliver immediate thermal barrier reduction with 0 m² soil required) "
+        f"with deep canopy planting ({meta['trees']}) and transit hydration kiosks, the plan maximizes thermodynamic cooling efficiency "
+        f"per currency unit while protecting vulnerable populations around {sum(c.assets.schools for c in cells)} schools and {sum(c.assets.hospitals for c in cells)} healthcare hubs."
     )
     
     co_benefits = [
         "Urban Heat Island (UHI) mitigation with up to 15% indoor cooling electricity savings in retrofitted buildings",
-        "Air quality improvement via particulate capture from 3,000+ native trees",
-        "Direct heatstroke protection for outdoor gig workers, auto drivers, and daily commuters",
+        f"Air quality improvement via particulate capture from native trees ({meta['trees'].split(',')[0]})",
+        "Direct heatstroke protection for outdoor gig workers, drivers, and daily commuters",
         "Stormwater absorption and urban flash flood attenuation through increased permeable root zones",
         "Explainable, audit-ready ESG & municipal climate resilience compliance metrics"
     ]
+
+    spot_eval = get_spot_phase_evaluation(scenario.city, selected_ward_id, scenario.total_budget_inr)
+    calendar = get_city_heat_calendar(scenario.city)
     
     return ActionPlanResponse(
         scenario_result=scenario,
@@ -212,23 +340,30 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], p
         co_benefits=co_benefits,
         llm_model="Vertex AI Gemini 2.5 Flash",
         is_live_llm=False,
+        spot_phase_evaluation=spot_eval,
+        heat_calendar=calendar,
         status="success"
     )
 
-def generate_action_plan(scenario: ScenarioResult, cells: List[ClimateCell], persona: str = "Municipal Commissioner") -> ActionPlanResponse:
+def generate_action_plan(
+    scenario: ScenarioResult,
+    cells: List[ClimateCell],
+    persona: str = "Municipal Commissioner",
+    selected_ward_id: Optional[str] = None
+) -> ActionPlanResponse:
     """
     Generates the prescriptive action plan using Gemini 2.5 Flash / Vertex AI if available,
     otherwise gracefully falls back to the deterministic resilience engine.
     """
     if not settings.GEMINI_API_KEY:
         logger.info("No GEMINI_API_KEY configured. Using expert fallback engine.")
-        return generate_fallback_plan(scenario, cells, persona=persona)
+        return generate_fallback_plan(scenario, cells, persona=persona, selected_ward_id=selected_ward_id)
         
     try:
         from google import genai
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
         
-        context_str = build_prompt_context(scenario, cells, persona=persona)
+        context_str = build_prompt_context(scenario, cells, persona=persona, selected_ward_id=selected_ward_id)
         prompt = f"""
 You are the Lead Urban Climate & Albedo Resilience AI for the "Avani Albedo" decision engine.
 Target Persona: {persona}.
@@ -296,6 +431,9 @@ Please respond strictly in valid JSON format with the following keys:
                 if p.estimated_spend_inr <= 0:
                     p.estimated_spend_inr = round(spent * weights[min(idx, 2)], 2)
         
+        spot_eval = get_spot_phase_evaluation(scenario.city, selected_ward_id, scenario.total_budget_inr)
+        calendar = get_city_heat_calendar(scenario.city)
+
         return ActionPlanResponse(
             scenario_result=scenario,
             executive_summary=data.get("executive_summary", ""),
@@ -307,11 +445,13 @@ Please respond strictly in valid JSON format with the following keys:
             co_benefits=data.get("co_benefits", []),
             llm_model="Gemini 2.5 Flash (Live Vertex/Studio)",
             is_live_llm=True,
+            spot_phase_evaluation=spot_eval,
+            heat_calendar=calendar,
             status="success"
         )
         
     except Exception as e:
         logger.warning(f"Error calling Gemini API: {e}. Gracefully activating fallback engine.")
-        fallback = generate_fallback_plan(scenario, cells, persona=persona)
+        fallback = generate_fallback_plan(scenario, cells, persona=persona, selected_ward_id=selected_ward_id)
         fallback.llm_model = f"Avani-Albedo-Fallback (Reason: {str(e)[:40]}...)"
         return fallback

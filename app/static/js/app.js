@@ -356,6 +356,13 @@ function initEventHandlers() {
   const tlPlayBtn = document.getElementById('timelapse-play-btn');
   if (tlPlayBtn) tlPlayBtn.addEventListener('click', toggleTimelapsePlay);
 
+  const btn12yr = document.getElementById('tl-mode-12yr');
+  const btn20yr = document.getElementById('tl-mode-20yr');
+  if (btn12yr && btn20yr) {
+    btn12yr.addEventListener('click', () => switchTimelapseMode("12yr"));
+    btn20yr.addEventListener('click', () => switchTimelapseMode("20yr"));
+  }
+
   const tlSlider = document.getElementById('timelapse-year-slider');
   if (tlSlider) {
     tlSlider.addEventListener('input', (e) => {
@@ -364,14 +371,7 @@ function initEventHandlers() {
     });
   }
 
-  document.querySelectorAll('.year-tick').forEach(tick => {
-    tick.addEventListener('click', () => {
-      const idx = parseInt(tick.dataset.idx);
-      currentTimelapseYearIndex = idx;
-      if (tlSlider) tlSlider.value = idx;
-      renderTimelapseYear(idx);
-    });
-  });
+  bindTimelapseTicks();
 }
 
 // ================= AUTHENTICATION LOGIC =================
@@ -814,6 +814,7 @@ async function onWardPrecisionChanged(wardId) {
   if (wardId === "ALL" || !wardId) {
     selectedWardId = null;
     loadTemperatureTimeline(currentSelectedCity, null);
+    loadSpotPhaseEvaluation(currentSelectedCity, null);
     return;
   }
   selectedWardId = wardId;
@@ -823,6 +824,7 @@ async function onWardPrecisionChanged(wardId) {
     openCellInspector(targetCell);
   }
   loadTemperatureTimeline(currentSelectedCity, wardId);
+  loadSpotPhaseEvaluation(currentSelectedCity, wardId);
 }
 
 async function onCountryChanged(countryName) {
@@ -1292,6 +1294,7 @@ function openCellInspector(cell) {
     wardSelect.value = cell.cell_id;
   }
   selectedWardId = cell.cell_id;
+  loadSpotPhaseEvaluation(currentSelectedCity, cell.cell_id);
 }
 
 function renderWardMicroChart(cell) {
@@ -1433,6 +1436,20 @@ function renderActionPlan(plan) {
   if (plan.land_feasibility_summary) {
     const lfsEl = document.getElementById('plan-land-feasibility-summary');
     if (lfsEl) lfsEl.textContent = plan.land_feasibility_summary;
+  }
+
+  // Spot-Specific Phase Comparison & Suitability Evaluator
+  if (plan.spot_phase_evaluation) {
+    renderSpotPhaseComparison(plan.spot_phase_evaluation);
+  } else {
+    loadSpotPhaseEvaluation(currentSelectedCity, selectedWardId);
+  }
+
+  // 12-Month Heat Calendar & Precaution Window
+  if (plan.heat_calendar) {
+    renderHeatCalendar(plan.heat_calendar);
+  } else {
+    loadHeatCalendar(currentSelectedCity);
   }
 
   // Co-benefits
@@ -1629,6 +1646,232 @@ function toggleTimelapsePlay() {
       if (slider) slider.value = currentTimelapseYearIndex;
       renderTimelapseYear(currentTimelapseYearIndex);
     }, 1500);
+  }
+}
+
+function bindTimelapseTicks() {
+  document.querySelectorAll('.year-tick').forEach(tick => {
+    tick.addEventListener('click', () => {
+      const idx = parseInt(tick.dataset.idx);
+      currentTimelapseYearIndex = idx;
+      const tlSlider = document.getElementById('timelapse-year-slider');
+      if (tlSlider) tlSlider.value = idx;
+      renderTimelapseYear(idx);
+    });
+  });
+}
+
+let currentTimelapseMode = "12yr";
+
+async function switchTimelapseMode(mode) {
+  currentTimelapseMode = mode;
+  const btn12 = document.getElementById('tl-mode-12yr');
+  const btn20 = document.getElementById('tl-mode-20yr');
+  const titleText = document.getElementById('timelapse-title-text');
+  const labelsContainer = document.querySelector('.timelapse-year-labels');
+
+  if (mode === "20yr") {
+    if (btn12) { btn12.classList.remove('active'); btn12.style.background = 'transparent'; btn12.style.color = '#94a3b8'; }
+    if (btn20) { btn20.classList.add('active'); btn20.style.background = 'var(--color-cyan)'; btn20.style.color = '#020617'; }
+    if (titleText) titleText.textContent = "🌍 20-Year Satellite Archive (2005 – 2025)";
+
+    if (labelsContainer) {
+      labelsContainer.innerHTML = `
+        <span class="year-tick" data-idx="0">2005</span>
+        <span class="year-tick" data-idx="1">2010</span>
+        <span class="year-tick" data-idx="2">2015</span>
+        <span class="year-tick" data-idx="3">2020</span>
+        <span class="year-tick active" data-idx="4">2025</span>
+      `;
+      bindTimelapseTicks();
+    }
+    await loadTwentyYearTimelapse(currentSelectedCity);
+  } else {
+    if (btn20) { btn20.classList.remove('active'); btn20.style.background = 'transparent'; btn20.style.color = '#94a3b8'; }
+    if (btn12) { btn12.classList.add('active'); btn12.style.background = 'var(--color-cyan)'; btn12.style.color = '#020617'; }
+    if (titleText) titleText.textContent = "🌍 Earth Observation Archive (2014 – 2026)";
+
+    if (labelsContainer) {
+      labelsContainer.innerHTML = `
+        <span class="year-tick" data-idx="0">2014</span>
+        <span class="year-tick" data-idx="1">2017</span>
+        <span class="year-tick" data-idx="2">2020</span>
+        <span class="year-tick" data-idx="3">2023</span>
+        <span class="year-tick active" data-idx="4">2026</span>
+      `;
+      bindTimelapseTicks();
+    }
+    await loadTimelapseData(currentSelectedCity);
+  }
+}
+
+async function loadTwentyYearTimelapse(cityName = currentSelectedCity) {
+  try {
+    const res = await fetch(`/api/history/20yr-archive?city=${encodeURIComponent(cityName)}`);
+    if (!res.ok) return;
+    const arch = await res.json();
+    timelapseData = {
+      city: arch.city,
+      records: arch.records,
+      restoration_target_trees: arch.total_trees_lost_20yr,
+      restoration_cool_roof_sqft: 1800000
+    };
+    currentTimelapseYearIndex = 4;
+    const slider = document.getElementById('timelapse-year-slider');
+    if (slider) {
+      slider.max = timelapseData.records.length - 1;
+      slider.value = 4;
+    }
+    renderTimelapseYear(4);
+  } catch (err) {
+    console.error("Error loading 20yr archive:", err);
+  }
+}
+
+// ================= SPOT-SPECIFIC PHASE EVALUATION =================
+let cachedSpotEvaluation = null;
+
+async function loadSpotPhaseEvaluation(cityName = currentSelectedCity, wardId = selectedWardId) {
+  try {
+    let url = `/api/phases/spot-evaluation?city=${encodeURIComponent(cityName)}&budget_inr=${currentBudgetInr}`;
+    if (wardId && wardId !== 'ALL') {
+      url += `&ward_id=${encodeURIComponent(wardId)}`;
+    }
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    cachedSpotEvaluation = data;
+    renderSpotPhaseComparison(data);
+  } catch (err) {
+    console.error("Error loading spot evaluation:", err);
+  }
+}
+
+function renderSpotPhaseComparison(evaluation) {
+  if (!evaluation) return;
+  cachedSpotEvaluation = evaluation;
+
+  const wardBadge = document.getElementById('spot-eval-ward-badge');
+  if (wardBadge) wardBadge.textContent = `${evaluation.ward_name} (${evaluation.ward_id})`;
+
+  const lstEl = document.getElementById('spot-eval-lst');
+  if (lstEl) lstEl.textContent = `${evaluation.peak_lst} °C`;
+
+  const hviEl = document.getElementById('spot-eval-hvi');
+  if (hviEl) hviEl.textContent = evaluation.hvi_score;
+
+  const builtEl = document.getElementById('spot-eval-built');
+  if (builtEl) builtEl.textContent = `${evaluation.built_density_pct}%`;
+
+  const soilEl = document.getElementById('spot-eval-soil');
+  if (soilEl) soilEl.textContent = `${evaluation.unbuilt_pct}%`;
+
+  const titleEl = document.getElementById('spot-eval-best-phase-title');
+  if (titleEl) titleEl.textContent = `${evaluation.recommended_phase_name} is Top Choice for This Spot`;
+
+  const starsEl = document.getElementById('spot-eval-best-phase-stars');
+  const bestPhase = (evaluation.phases || []).find(p => p.is_recommended_best) || (evaluation.phases && evaluation.phases[0]);
+  if (starsEl && bestPhase) {
+    starsEl.textContent = `${bestPhase.suitability_rating} (${bestPhase.suitability_score_pct}% Match)`;
+  }
+
+  const ratEl = document.getElementById('spot-eval-best-phase-rationale');
+  if (ratEl) ratEl.textContent = evaluation.why_recommended;
+
+  const grid = document.getElementById('spot-phases-grid');
+  if (!grid || !evaluation.phases) return;
+
+  grid.innerHTML = evaluation.phases.map(p => {
+    const isBest = p.is_recommended_best;
+    const borderStyle = isBest ? '2px solid #10b981' : '1px solid rgba(255,255,255,0.08)';
+    const bgStyle = isBest ? 'rgba(16, 185, 129, 0.08)' : 'rgba(15, 23, 42, 0.6)';
+    const tagBg = isBest ? 'background: #10b981; color: #020617;' : 'background: rgba(255,255,255,0.1); color: #cbd5e1;';
+    
+    return `
+      <div class="spot-phase-card ${isBest ? 'active-best' : ''}" style="border: ${borderStyle}; background: ${bgStyle}; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.2s ease;">
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <strong style="font-size: 11.5px; color: ${isBest ? '#34d399' : '#f8fafc'};">${p.phase_title}</strong>
+            <span style="${tagBg} font-size: 9.5px; padding: 2px 5px; border-radius: 3px; font-weight: 700; white-space: nowrap;">
+              ${isBest ? '⭐ BEST OPTION' : `${p.suitability_score_pct}%`}
+            </span>
+          </div>
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 6px;">
+            ⏱️ <b>${p.speed}</b> • <span>${p.land_requirement}</span>
+          </div>
+          <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 10px; color: #38bdf8; font-weight: 700; background: rgba(56, 189, 248, 0.15); padding: 2px 6px; border-radius: 4px;">
+              Projected Cool: -${p.cooling_impact_c}°C
+            </span>
+          </div>
+          <ul style="padding-left: 1rem; margin: 0 0 6px 0; font-size: 10.5px; color: #cbd5e1; line-height: 1.4;">
+            ${p.focus_interventions.map(fi => `<li>${fi}</li>`).join('')}
+          </ul>
+        </div>
+        <p style="margin: 4px 0 0 0; font-size: 10px; color: #94a3b8; line-height: 1.35; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 4px;">
+          ${p.rationale}
+        </p>
+      </div>
+    `;
+  }).join('');
+}
+
+// ================= 12-MONTH HEAT CALENDAR & PRECAUTION WINDOW =================
+async function loadHeatCalendar(cityName = currentSelectedCity) {
+  try {
+    const res = await fetch(`/api/heat-calendar?city=${encodeURIComponent(cityName)}`);
+    if (!res.ok) return;
+    const calendar = await res.json();
+    renderHeatCalendar(calendar);
+  } catch (err) {
+    console.error("Error loading heat calendar:", err);
+  }
+}
+
+function renderHeatCalendar(calendar) {
+  if (!calendar) return;
+
+  const cityBadge = document.getElementById('calendar-city-badge');
+  if (cityBadge) cityBadge.textContent = `${calendar.city} (${calendar.country})`;
+
+  const peakEl = document.getElementById('cal-peak-window');
+  if (peakEl) peakEl.textContent = calendar.peak_heatwave_window;
+
+  const prepEl = document.getElementById('cal-prep-window');
+  if (prepEl) prepEl.textContent = calendar.precaution_prep_window;
+
+  const plantEl = document.getElementById('cal-plant-window');
+  if (plantEl) plantEl.textContent = calendar.planting_window;
+
+  // Render 12 months heatmap strip
+  const monthsGrid = document.getElementById('calendar-months-grid');
+  if (monthsGrid && calendar.months) {
+    monthsGrid.innerHTML = calendar.months.map(m => {
+      let bg = '#10b981'; // Green
+      let textCol = '#ffffff';
+      if (m.status.includes('Critical')) {
+        bg = '#ef4444'; // Red
+      } else if (m.status.includes('High')) {
+        bg = '#f97316'; // Orange
+      } else if (m.status.includes('Moderate')) {
+        bg = '#eab308'; // Yellow
+        textCol = '#020617';
+      }
+      return `
+        <div style="background: ${bg}; color: ${textCol}; padding: 6px 2px; border-radius: 4px; text-align: center; font-size: 9.5px; font-weight: 700; display: flex; flex-direction: column; gap: 2px;" title="${m.month}: ${m.high_lst}°C - ${m.action_note}">
+          <span>${m.month}</span>
+          <span style="font-size: 9px; opacity: 0.95;">${m.high_lst}°</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Render Advisories
+  const advList = document.getElementById('calendar-advisories-list');
+  if (advList && calendar.advisories) {
+    advList.innerHTML = calendar.advisories.map(a => `
+      <li style="margin-bottom: 4px;">${a}</li>
+    `).join('');
   }
 }
 
