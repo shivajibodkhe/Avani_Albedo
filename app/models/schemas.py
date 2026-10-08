@@ -57,6 +57,14 @@ class ScenarioRequest(BaseModel):
         default="optimized",
         description="One of: 'optimized', 'green_first', 'albedo_first', 'public_health_first'"
     )
+    persona: str = Field(
+        default="Municipal Commissioner",
+        description="Decision-maker persona: 'Municipal Commissioner', 'Public Health Officer', 'Urban Planner', 'Disaster Management Head'"
+    )
+    selected_ward_id: Optional[str] = Field(
+        default=None,
+        description="Optional specific ward ID for high-precision localized intervention"
+    )
     custom_weights: Optional[Dict[str, float]] = None
 
 class ScenarioResult(BaseModel):
@@ -97,12 +105,38 @@ class ActionPlanResponse(BaseModel):
     scenario_result: ScenarioResult
     executive_summary: str
     rationale: str
+    persona: str = "Municipal Commissioner"
+    strategic_recommendations: List[str] = []
     ward_priorities: List[WardPriority]
     implementation_phases: List[ImplementationPhase]
     co_benefits: List[str]
     llm_model: str
     is_live_llm: bool
     status: str = "success"
+
+class DayForecast(BaseModel):
+    day: str
+    date: str
+    high_c: float
+    low_c: float
+    mitigated_high_c: float
+    alert_level: str
+
+class TemperatureTimelineResponse(BaseModel):
+    city: str
+    ward_id: Optional[str] = None
+    ward_name: Optional[str] = None
+    current_lst_c: float
+    peak_high_c: float
+    peak_time: str
+    low_temp_c: float
+    low_time: str
+    heat_hazard_duration_hours: float
+    cooling_delta_c: float
+    diurnal_hours: List[str]
+    baseline_temp_c: List[float]
+    cooled_temp_c: List[float]
+    forecast_7days: List[DayForecast]
 
 class SystemStatusResponse(BaseModel):
     app_name: str

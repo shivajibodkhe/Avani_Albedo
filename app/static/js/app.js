@@ -12,10 +12,16 @@ let interventionMarkerGroup;
 let selectedScenario = "optimized";
 let currentBudgetInr = 10000000.0; // 1 Crore default
 
-// Geographic State (Cascading Country -> City)
+// Geographic State (Cascading Country -> City -> Ward)
 let geographicHierarchy = null;
 let currentSelectedCity = "Bengaluru";
 let currentSelectedCountry = "India";
+let selectedPersona = "Municipal Commissioner";
+let selectedWardId = null;
+
+// Chart Instances
+let diurnalChartInstance = null;
+let wardMicroChartInstance = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   initMap();
@@ -185,6 +191,40 @@ function initEventHandlers() {
   if (citySelect) {
     citySelect.addEventListener('change', (e) => {
       onCityChanged(e.target.value);
+    });
+  }
+
+  // Ward Precision Selector Handler
+  const wardSelect = document.getElementById('ward-select');
+  if (wardSelect) {
+    wardSelect.addEventListener('change', (e) => {
+      onWardPrecisionChanged(e.target.value);
+    });
+  }
+
+  // Decision-Maker Persona Selector Handler
+  const personaSelect = document.getElementById('persona-select');
+  if (personaSelect) {
+    personaSelect.addEventListener('change', (e) => {
+      selectedPersona = e.target.value;
+      const badge = document.getElementById('plan-persona-badge');
+      if (badge) badge.textContent = selectedPersona;
+      runAvaniAgent();
+    });
+  }
+
+  // Paid GCP Infra Modal Triggers
+  const infraModalBtn = document.getElementById('infra-modal-btn');
+  const infraModal = document.getElementById('infra-modal');
+  const closeInfraBtn = document.getElementById('close-infra-btn');
+  if (infraModalBtn && infraModal) {
+    infraModalBtn.addEventListener('click', () => {
+      infraModal.classList.remove('hidden');
+    });
+  }
+  if (closeInfraBtn && infraModal) {
+    closeInfraBtn.addEventListener('click', () => {
+      infraModal.classList.add('hidden');
     });
   }
 }
@@ -589,6 +629,48 @@ function populateCityDropdown(countryName) {
   });
 
   currentSelectedCity = citySelect.value;
+  populateWardDropdown(currentSelectedCity);
+}
+
+function populateWardDropdown(cityName) {
+  const wardSelect = document.getElementById('ward-select');
+  if (!wardSelect || !geographicHierarchy) return;
+
+  wardSelect.innerHTML = '<option value="ALL" selected>🌐 All Metropolitan Wards (Full City)</option>';
+  
+  let cityMeta = null;
+  for (const c of geographicHierarchy.countries) {
+    const match = c.cities.find(ct => ct.key === cityName);
+    if (match) {
+      cityMeta = match;
+      break;
+    }
+  }
+
+  if (cityMeta && cityMeta.wards) {
+    cityMeta.wards.forEach(w => {
+      const opt = document.createElement('option');
+      opt.value = w.cell_id;
+      opt.textContent = `${w.name} (${w.zone} • LST ${w.lst}°C)`;
+      wardSelect.appendChild(opt);
+    });
+  }
+  selectedWardId = null;
+}
+
+async function onWardPrecisionChanged(wardId) {
+  if (wardId === "ALL" || !wardId) {
+    selectedWardId = null;
+    loadTemperatureTimeline(currentSelectedCity, null);
+    return;
+  }
+  selectedWardId = wardId;
+  const targetCell = climateCells.find(c => c.cell_id === wardId);
+  if (targetCell) {
+    map.flyTo([targetCell.center_lat, targetCell.center_lng], 13, { duration: 1.2 });
+    openCellInspector(targetCell);
+  }
+  loadTemperatureTimeline(currentSelectedCity, wardId);
 }
 
 async function onCountryChanged(countryName) {
@@ -602,6 +684,8 @@ async function onCountryChanged(countryName) {
 
 async function onCityChanged(cityKey) {
   currentSelectedCity = cityKey;
+  populateWardDropdown(cityKey);
+
   // Smooth camera flight to target city
   let cityMeta = null;
   if (geographicHierarchy) {
@@ -620,6 +704,7 @@ async function onCityChanged(cityKey) {
 
   // Reload climate cells and run optimization for the chosen city
   await loadClimateCells(currentSelectedCity);
+  loadTemperatureTimeline(currentSelectedCity, null);
 }
 
 async function loadClimateCells(city = currentSelectedCity) {
@@ -650,7 +735,9 @@ async function runAvaniAgent() {
       body: JSON.stringify({
         city: currentSelectedCity,
         budget_inr: currentBudgetInr,
-        scenario_type: selectedScenario
+        scenario_type: selectedScenario,
+        persona: selectedPersona,
+        selected_ward_id: selectedWardId
       })
     });
     
@@ -673,6 +760,164 @@ async function runAvaniAgent() {
     spinner.classList.add('hidden');
     btnText.textContent = "🚀 Run Avani Climate Agent";
   }
+}
+
+// ================= TEMPERATURE TIMELINE & CHARTS =================
+async function loadTemperatureTimeline(city, wardId) {
+  try {
+    const url = `/api/temperature-timeline?city=${encodeURIComponent(city)}${wardId ? `&cell_id=${encodeURIComponent(wardId)}` : ''}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const areaBadge = document.getElementById('timeline-area-badge');
+    if (areaBadge) areaBadge.textContent = data.ward_name ? `${data.ward_name} (${city})` : `${city} Metropolitan Average`;
+
+    const hazardBadge = document.getElementById('timeline-hazard-badge');
+    if (hazardBadge) hazardBadge.textContent = `Hazardous Hours: ${data.heat_hazard_duration_hours}h/day`;
+
+    const peakEl = document.getElementById('timeline-peak-temp');
+    if (peakEl) peakEl.textContent = `${data.peak_high_c.toFixed(1)} °C`;
+
+    const peakTimeEl = document.getElementById('timeline-peak-time');
+    if (peakTimeEl) peakTimeEl.textContent = data.peak_time;
+
+    const lowEl = document.getElementById('timeline-low-temp');
+    if (lowEl) lowEl.textContent = `${data.low_temp_c.toFixed(1)} °C`;
+
+    const lowTimeEl = document.getElementById('timeline-low-time');
+    if (lowTimeEl) lowTimeEl.textContent = data.low_time;
+
+    const cooledEl = document.getElementById('timeline-cooled-temp');
+    if (cooledEl) {
+      const cooledPeak = data.cooled_temp_c[data.diurnal_hours.indexOf("14:00")] || (data.peak_high_c - data.cooling_delta_c);
+      cooledEl.textContent = `${cooledPeak.toFixed(1)} °C`;
+    }
+
+    const dropEl = document.getElementById('timeline-mitigation-drop');
+    if (dropEl) dropEl.textContent = `-${data.cooling_delta_c.toFixed(1)} °C Peak Mitigation`;
+
+    const alertEl = document.getElementById('timeline-alert-level');
+    if (alertEl) {
+      const activeAlert = data.forecast_7days[0]?.alert_level || "Normal";
+      alertEl.textContent = activeAlert;
+      if (activeAlert.includes("Red")) alertEl.className = "kpi-value red";
+      else if (activeAlert.includes("Orange")) alertEl.className = "kpi-value orange";
+      else if (activeAlert.includes("Yellow")) alertEl.className = "kpi-value yellow";
+      else alertEl.className = "kpi-value emerald";
+    }
+
+    renderDiurnalChart(data);
+    renderForecastCards(data.forecast_7days);
+  } catch (err) {
+    console.error("Failed to load temperature timeline", err);
+  }
+}
+
+function renderDiurnalChart(data) {
+  const canvas = document.getElementById('diurnal-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  if (diurnalChartInstance) {
+    diurnalChartInstance.destroy();
+  }
+
+  const ctx = canvas.getContext('2d');
+  diurnalChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.diurnal_hours,
+      datasets: [
+        {
+          label: 'Baseline Surface Temp (°C)',
+          data: data.baseline_temp_c,
+          borderColor: '#f43f5e',
+          backgroundColor: 'rgba(244, 63, 94, 0.12)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointBackgroundColor: '#f43f5e',
+          pointRadius: 4,
+          pointHoverRadius: 6
+        },
+        {
+          label: 'With Avani Albedo (°C)',
+          data: data.cooled_temp_c,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2.5,
+          pointBackgroundColor: '#10b981',
+          pointRadius: 4,
+          pointHoverRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0f172a',
+          titleColor: '#38bdf8',
+          bodyColor: '#f8fafc',
+          borderColor: '#334155',
+          borderWidth: 1,
+          callbacks: {
+            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}°C`
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        },
+        y: {
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: {
+            color: '#94a3b8',
+            font: { size: 10 },
+            callback: (v) => `${v}°C`
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderForecastCards(forecast) {
+  const container = document.getElementById('forecast-cards-container');
+  if (!container || !forecast) return;
+
+  container.innerHTML = forecast.map(f => {
+    let badgeColor = '#10b981';
+    let badgeBg = 'rgba(16, 185, 129, 0.15)';
+    if (f.alert_level.includes('Red')) {
+      badgeColor = '#ef4444';
+      badgeBg = 'rgba(239, 68, 68, 0.2)';
+    } else if (f.alert_level.includes('Orange')) {
+      badgeColor = '#f97316';
+      badgeBg = 'rgba(249, 115, 22, 0.2)';
+    } else if (f.alert_level.includes('Yellow')) {
+      badgeColor = '#eab308';
+      badgeBg = 'rgba(234, 179, 8, 0.2)';
+    }
+
+    return `
+      <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 4px; text-align: center;">
+        <div style="font-size: 11px; font-weight: 700; color: #f8fafc;">${f.day}</div>
+        <div style="font-size: 9px; color: var(--text-dim); margin-bottom: 4px;">${f.date}</div>
+        <div style="font-size: 14px; font-weight: 800; color: #f43f5e;">${f.high_c}°</div>
+        <div style="font-size: 11px; color: #64748b;">${f.low_c}°</div>
+        <div style="font-size: 11px; font-weight: 700; color: #10b981; margin-top: 2px;">-${(f.high_c - f.mitigated_high_c).toFixed(1)}° ❄️</div>
+        <div style="margin-top: 4px; display: inline-block; font-size: 8px; font-weight: 700; color: ${badgeColor}; background: ${badgeBg}; padding: 1px 4px; border-radius: 3px;">
+          ${f.alert_level.replace('Alert', '').trim()}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function runComparison() {
@@ -854,6 +1099,86 @@ function openCellInspector(cell) {
   `;
 
   inspector.classList.remove('hidden');
+
+  // Update Hazard Badge and Micro-Chart in Inspector
+  const hazardEl = document.getElementById('ward-hazard-hours');
+  if (hazardEl) {
+    hazardEl.textContent = `${cell.heat_persistence_days > 60 ? '8.5h' : '6.0h'} > 38°C peak hazard`;
+  }
+  renderWardMicroChart(cell);
+
+  // Sync Ward Precision dropdown
+  const wardSelect = document.getElementById('ward-select');
+  if (wardSelect) {
+    wardSelect.value = cell.cell_id;
+  }
+  selectedWardId = cell.cell_id;
+}
+
+function renderWardMicroChart(cell) {
+  const canvas = document.getElementById('ward-micro-chart');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  if (wardMicroChartInstance) {
+    wardMicroChartInstance.destroy();
+  }
+
+  const hours = ["00:00", "06:00", "12:00", "14:00", "18:00", "21:00"];
+  const baseMin = cell.lst - 17.5;
+  const baseline = [
+    Math.round((baseMin + (cell.lst - baseMin) * 0.22) * 10) / 10,
+    Math.round(baseMin * 10) / 10,
+    Math.round((baseMin + (cell.lst - baseMin) * 0.88) * 10) / 10,
+    cell.lst,
+    Math.round((baseMin + (cell.lst - baseMin) * 0.65) * 10) / 10,
+    Math.round((baseMin + (cell.lst - baseMin) * 0.38) * 10) / 10
+  ];
+  const cooled = baseline.map((v, i) => Math.round((v - (i === 3 ? 2.8 : 1.6)) * 10) / 10);
+
+  const ctx = canvas.getContext('2d');
+  wardMicroChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hours,
+      datasets: [
+        {
+          label: 'Baseline (°C)',
+          data: baseline,
+          borderColor: '#f43f5e',
+          borderWidth: 2,
+          pointRadius: 2,
+          tension: 0.3
+        },
+        {
+          label: 'Cooled (°C)',
+          data: cooled,
+          borderColor: '#10b981',
+          borderWidth: 2,
+          pointRadius: 2,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0f172a',
+          titleColor: '#38bdf8',
+          bodyColor: '#f8fafc',
+          callbacks: {
+            label: (c) => ` ${c.dataset.label}: ${c.raw}°C`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { display: false } },
+        y: { ticks: { color: '#64748b', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+      }
+    }
+  });
 }
 
 // ================= RESULTS RENDERING =================
@@ -875,6 +1200,20 @@ function renderActionPlan(plan) {
   document.getElementById('plan-title').textContent = plan.scenario_result.scenario_title;
   document.getElementById('plan-exec-summary').textContent = plan.executive_summary;
   document.getElementById('plan-rationale').textContent = plan.rationale;
+
+  // Persona Badge & AI Strategic Recommendations
+  const personaBadge = document.getElementById('plan-persona-badge');
+  if (personaBadge) personaBadge.textContent = plan.persona || selectedPersona;
+
+  const recContainer = document.getElementById('plan-recommendations-container');
+  if (recContainer && plan.strategic_recommendations && plan.strategic_recommendations.length > 0) {
+    recContainer.innerHTML = plan.strategic_recommendations.map(r => `
+      <li style="margin-bottom: 6px;">${r}</li>
+    `).join('');
+  }
+
+  // Load and update temperature timeline
+  loadTemperatureTimeline(currentSelectedCity, selectedWardId);
 
   // Ward priorities
   const priorityContainer = document.getElementById('ward-priority-container');

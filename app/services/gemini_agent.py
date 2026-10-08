@@ -9,13 +9,14 @@ from app.models.schemas import (
 
 logger = logging.getLogger("avani_albedo.gemini")
 
-def build_prompt_context(scenario: ScenarioResult, cells: List[ClimateCell]) -> str:
+def build_prompt_context(scenario: ScenarioResult, cells: List[ClimateCell], persona: str = "Municipal Commissioner") -> str:
     """Prepares structured summary for the Gemini prompt."""
     cell_lookup = {c.cell_id: c for c in cells}
     top_allocations = sorted(scenario.allocations, key=lambda x: x.total_cost, reverse=True)[:5]
     
     context = {
         "city": scenario.city,
+        "persona": persona,
         "scenario_type": scenario.scenario_type,
         "scenario_title": scenario.scenario_title,
         "budget_allocated_inr": scenario.total_budget_inr,
@@ -45,11 +46,11 @@ def build_prompt_context(scenario: ScenarioResult, cells: List[ClimateCell]) -> 
     }
     return json.dumps(context, indent=2)
 
-def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell]) -> ActionPlanResponse:
+def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell], persona: str = "Municipal Commissioner") -> ActionPlanResponse:
     """
     Expert Prescriptive Climate Intelligence Fallback:
     Provides a guaranteed, error-free, mathematically grounded action plan
-    even if the network is offline or no Gemini API key is configured.
+    tailored to the selected decision-maker persona.
     """
     cell_lookup = {c.cell_id: c for c in cells}
     sorted_allocs = sorted(scenario.allocations, key=lambda x: (x.hvi_score, x.total_cost), reverse=True)
@@ -119,15 +120,55 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell]) -
         )
     ]
     
-    exec_summary = (
-        f"Avani Albedo Prescriptive Climate Action Plan successfully generated for {scenario.city}. "
-        f"Under a total budget of ₹{scenario.total_budget_inr/100000:.1f} Lakhs, the OR-Tools optimization engine "
-        f"allocated ₹{scenario.budget_spent_lakhs} Lakhs across {len(scenario.allocations)} climate cells. "
-        f"The plan deploys {scenario.total_trees:,} native trees, {scenario.total_cool_roof_sqft:,} sq ft of cool roofs, "
-        f"{scenario.total_shades} shade structures, and {scenario.total_hydration} hydration stations. "
-        f"This yields a projected average temperature drop of {scenario.avg_temp_reduction_c}°C (peaking at -{scenario.max_temp_reduction_c}°C in hotspots), "
-        f"directly benefiting {scenario.total_beneficiaries:,} citizens and reducing severe heat vulnerability by {scenario.heat_exposure_reduction_pct}%."
-    )
+    # Persona-tailored recommendations & summary
+    if "health" in persona.lower() or "medical" in persona.lower():
+        strategic_recommendations = [
+            f"Pre-position IV saline, cold packs, and oral rehydration packs across health centers in {sorted_allocs[0].cell_name} (HVI: {sorted_allocs[0].hvi_score}).",
+            "Mobilize ASHA and frontline workers for mandatory home checks on vulnerable seniors and infants during 12:00–16:00 peak hours.",
+            "Commission wet-bulb globe temperature (WBGT) real-time warning sirens and misting stations near major transit stops.",
+            "Establish syndromic heatstroke surveillance across hospitals linked directly to the municipal emergency dashboard."
+        ]
+        exec_summary = (
+            f"Public Health Climate Resilience Plan for {scenario.city}. Prioritizes safeguarding {scenario.total_beneficiaries:,} citizens "
+            f"from acute thermal distress and heatstroke. OR-Tools SCIP optimization directs ₹{scenario.budget_spent_lakhs}L toward critical wards, "
+            f"installing {scenario.total_hydration} hydration kiosks and {scenario.total_shades} shade points to lower hotspot exposure by {scenario.heat_exposure_reduction_pct}%."
+        )
+    elif "planner" in persona.lower() or "infrastructure" in persona.lower():
+        strategic_recommendations = [
+            f"Mandate Solar Reflectance Index (SRI) ≥ 82 for all commercial building permits and municipal re-roofing projects.",
+            f"Establish continuous 50-meter cool vegetative corridors connecting peripheral greens to {sorted_allocs[0].cell_name}.",
+            "Incorporate permeable cool-pavement standards for all new pedestrian pathways and parking facilities.",
+            "Embed ward Heat Vulnerability Indices (HVI) into municipal zoning master plans as a mandatory environmental gate."
+        ]
+        exec_summary = (
+            f"Urban Infrastructure & Planning Directive for {scenario.city}. Optimizes municipal built form across {len(scenario.allocations)} wards. "
+            f"Allocates {scenario.total_cool_roof_sqft:,} sq ft of high-albedo cool roofs and {scenario.total_trees:,} canopy trees "
+            f"delivering an average -{scenario.avg_temp_reduction_c}°C cooling with ₹{scenario.budget_spent_lakhs}L investment."
+        )
+    elif "disaster" in persona.lower() or "emergency" in persona.lower():
+        strategic_recommendations = [
+            f"Trigger Level-3 Heatwave Emergency Protocol: deploy mobile water tankers to top transit hubs between 11:00 AM and 4:00 PM.",
+            "Designate 25 air-conditioned municipal facilities and public libraries as 24/7 public cooling sanctuaries during Orange/Red alerts.",
+            "Broadcast targeted early-morning cell broadcast SMS warnings to vulnerable ward residents before 09:00 AM.",
+            "Enforce mandatory suspension of outdoor construction labor from 12:00 PM to 3:30 PM on forecasted peak heat days."
+        ]
+        exec_summary = (
+            f"Heatwave Emergency Response & Disaster Action Plan for {scenario.city}. Deploys rapid life-saving cooling infrastructure "
+            f"with {scenario.total_hydration} solar hydration stations and {scenario.total_shades} transit canopies to shield {scenario.total_beneficiaries:,} people."
+        )
+    else: # Default: Municipal Commissioner
+        strategic_recommendations = [
+            f"Enact municipal cool roof mandate for commercial & public roofs across {scenario.city} to lock in albedo > 0.70.",
+            "Authorize Public-Private Partnership (PPP) tenders for rapid solar hydration kiosk deployment financed via green municipal bonds.",
+            "Integrate Avani Albedo HVI telemetry directly into the Integrated Command & Control Centre (ICCC) for real-time monitoring.",
+            f"Reinvest projected 14% peak electricity savings from {scenario.total_cool_roof_sqft:,} sq ft cool roofs into urban forestry endowment."
+        ]
+        exec_summary = (
+            f"Executive Municipal Climate Action Plan for {scenario.city}. Prepared for the Municipal Commissioner. "
+            f"Under an allocated budget of ₹{scenario.total_budget_inr/100000:.1f} Lakhs, the OR-Tools SCIP solver optimizes ₹{scenario.budget_spent_lakhs}L "
+            f"across {len(scenario.allocations)} wards, achieving -{scenario.avg_temp_reduction_c}°C average cooling (up to -{scenario.max_temp_reduction_c}°C in hotspots) "
+            f"protecting {scenario.total_beneficiaries:,} citizens."
+        )
     
     rationale = (
         f"The prescriptive allocation prioritizes high Heat Vulnerability Index (HVI) wards where land surface temperature (LST) "
@@ -149,6 +190,8 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell]) -
         scenario_result=scenario,
         executive_summary=exec_summary,
         rationale=rationale,
+        persona=persona,
+        strategic_recommendations=strategic_recommendations,
         ward_priorities=ward_priorities,
         implementation_phases=phases,
         co_benefits=co_benefits,
@@ -157,22 +200,23 @@ def generate_fallback_plan(scenario: ScenarioResult, cells: List[ClimateCell]) -
         status="success"
     )
 
-def generate_action_plan(scenario: ScenarioResult, cells: List[ClimateCell]) -> ActionPlanResponse:
+def generate_action_plan(scenario: ScenarioResult, cells: List[ClimateCell], persona: str = "Municipal Commissioner") -> ActionPlanResponse:
     """
-    Generates the prescriptive action plan using Gemini 2.0 / Vertex AI if available,
+    Generates the prescriptive action plan using Gemini 2.5 Flash / Vertex AI if available,
     otherwise gracefully falls back to the deterministic resilience engine.
     """
     if not settings.GEMINI_API_KEY:
         logger.info("No GEMINI_API_KEY configured. Using expert fallback engine.")
-        return generate_fallback_plan(scenario, cells)
+        return generate_fallback_plan(scenario, cells, persona=persona)
         
     try:
         from google import genai
         client = genai.Client(api_key=settings.GEMINI_API_KEY)
         
-        context_str = build_prompt_context(scenario, cells)
+        context_str = build_prompt_context(scenario, cells, persona=persona)
         prompt = f"""
 You are the Lead Urban Climate & Albedo Resilience AI for the "Avani Albedo" decision engine.
+Target Persona: {persona}.
 Analyze the following optimization results and provide an authoritative, executive-ready climate action plan:
 
 OPTIMIZATION DATA:
@@ -180,12 +224,18 @@ OPTIMIZATION DATA:
 
 Please respond strictly in valid JSON format with the following keys:
 {{
-  "executive_summary": "Crisp 3-4 sentence executive briefing with numbers",
+  "executive_summary": "Crisp 3-4 sentence executive briefing with numbers tailored to {persona}",
   "rationale": "Clear physical & socioeconomic thermodynamic rationale",
+  "strategic_recommendations": [
+    "High-impact actionable recommendation 1 for {persona}",
+    "High-impact actionable recommendation 2 for {persona}",
+    "High-impact actionable recommendation 3 for {persona}",
+    "High-impact actionable recommendation 4 for {persona}"
+  ],
   "ward_priorities": [
     {{
       "rank": 1,
-      "cell_id": "BLR_001",
+      "cell_id": "ID",
       "cell_name": "Ward Name",
       "hvi_score": 85.0,
       "primary_interventions": ["list of key interventions"],
@@ -208,7 +258,6 @@ Please respond strictly in valid JSON format with the following keys:
             contents=prompt
         )
         
-        # Parse JSON
         text = response.text.strip()
         if text.startswith("```json"):
             text = text[7:]
@@ -227,6 +276,8 @@ Please respond strictly in valid JSON format with the following keys:
             scenario_result=scenario,
             executive_summary=data.get("executive_summary", ""),
             rationale=data.get("rationale", ""),
+            persona=persona,
+            strategic_recommendations=data.get("strategic_recommendations", []),
             ward_priorities=ward_priorities,
             implementation_phases=phases,
             co_benefits=data.get("co_benefits", []),
@@ -237,6 +288,6 @@ Please respond strictly in valid JSON format with the following keys:
         
     except Exception as e:
         logger.warning(f"Error calling Gemini API: {e}. Gracefully activating fallback engine.")
-        fallback = generate_fallback_plan(scenario, cells)
+        fallback = generate_fallback_plan(scenario, cells, persona=persona)
         fallback.llm_model = f"Avani-Albedo-Fallback (Reason: {str(e)[:40]}...)"
         return fallback

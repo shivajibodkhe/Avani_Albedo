@@ -12,12 +12,13 @@ from app.config import settings
 from app.models.schemas import (
     ClimateCell, ScenarioRequest, ScenarioResult,
     ActionPlanResponse, SystemStatusResponse,
-    LoginRequest, LoginResponse
+    LoginRequest, LoginResponse, TemperatureTimelineResponse
 )
 from app.data.bengaluru_heat_data import get_bengaluru_climate_cells
 from app.data.cities_heat_data import (
     get_geographic_hierarchy,
     get_climate_cells_for_city,
+    get_temperature_timeline,
     CITIES_REGISTRY
 )
 from app.services.hvi_engine import calculate_hvi_for_cells
@@ -135,7 +136,7 @@ def create_climate_action_plan(request: ScenarioRequest):
             budget_inr=request.budget_inr,
             scenario_type=request.scenario_type
         )
-        action_plan = generate_action_plan(scenario_result, cells)
+        action_plan = generate_action_plan(scenario_result, cells, persona=request.persona)
         # Track Quota Metrics
         admin_service.increment_metric("optimizer_runs")
         admin_service.increment_metric("gemini_calls")
@@ -145,6 +146,17 @@ def create_climate_action_plan(request: ScenarioRequest):
     except Exception as e:
         logger.error(f"Action plan generation failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/temperature-timeline", response_model=TemperatureTimelineResponse)
+def get_temperature_timeline_data(
+    city: str = Query("Bengaluru", description="Target city name"),
+    cell_id: Optional[str] = Query(None, description="Optional target ward ID")
+):
+    """
+    Returns 24-hour Diurnal Temperature curves (Baseline vs Cooled with Highs and Lows)
+    and 7-day heatwave forecast for the selected city or specific ward.
+    """
+    return get_temperature_timeline(city_name=city, cell_id=cell_id)
 
 @app.get("/api/scenarios/history")
 def get_scenario_history(limit: int = Query(5, description="Number of recent plans to fetch")):

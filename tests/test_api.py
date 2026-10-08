@@ -187,3 +187,58 @@ def test_multi_city_climate_cells_and_optimization():
     assert "scenarios" in cmp_del
     assert "green_first" in cmp_del["scenarios"]
 
+def test_expanded_cities_and_wards():
+    # Test Pune
+    res_pun = client.get("/api/cells?city=Pune")
+    assert res_pun.status_code == 200
+    pun_cells = res_pun.json()
+    assert len(pun_cells) == 5
+    assert any("Shivajinagar" in c["name"] for c in pun_cells)
+
+    # Test Chennai
+    res_che = client.get("/api/cells?city=Chennai")
+    assert res_che.status_code == 200
+    che_cells = res_che.json()
+    assert len(che_cells) == 5
+    assert any("T. Nagar" in c["name"] for c in che_cells)
+
+    # Test Kolkata
+    res_ccu = client.get("/api/cells?city=Kolkata")
+    assert res_ccu.status_code == 200
+    ccu_cells = res_ccu.json()
+    assert len(ccu_cells) == 4
+
+def test_temperature_timeline_api():
+    # 1. City-level timeline
+    res = client.get("/api/temperature-timeline?city=Bengaluru")
+    assert res.status_code == 200
+    data = res.json()
+    assert "diurnal_hours" in data
+    assert len(data["diurnal_hours"]) == 9
+    assert len(data["baseline_temp_c"]) == 9
+    assert len(data["cooled_temp_c"]) == 9
+    assert data["peak_high_c"] > data["low_temp_c"]
+    assert len(data["forecast_7days"]) == 7
+
+    # 2. Ward-specific timeline
+    res_ward = client.get("/api/temperature-timeline?city=Pune&cell_id=PUN_001")
+    assert res_ward.status_code == 200
+    ward_data = res_ward.json()
+    assert ward_data["ward_id"] == "PUN_001"
+    assert "Shivajinagar" in ward_data["ward_name"]
+
+def test_action_plan_with_persona_and_recommendations():
+    res = client.post("/api/action-plan", json={
+        "city": "Bengaluru",
+        "budget_inr": 10000000.0,
+        "scenario_type": "public_health_first",
+        "persona": "Chief Public Health Officer"
+    })
+    assert res.status_code == 200
+    plan = res.json()
+    assert plan["persona"] == "Chief Public Health Officer"
+    assert "strategic_recommendations" in plan
+    assert len(plan["strategic_recommendations"]) > 0
+    assert any("health" in r.lower() or "surveillance" in r.lower() or "asha" in r.lower() for r in plan["strategic_recommendations"])
+
+
