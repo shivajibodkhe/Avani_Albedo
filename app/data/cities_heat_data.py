@@ -814,6 +814,7 @@ def get_geographic_hierarchy() -> Dict[str, Any]:
             "zoom": meta["zoom"],
             "currency": meta["currency"],
             "currency_symbol": meta["currency_symbol"],
+            "usd_rate": meta.get("usd_rate", 0.012 if meta["currency"] == "INR" else (0.272 if meta["currency"] == "AED" else (0.746 if meta["currency"] == "SGD" else (1.282 if meta["currency"] == "GBP" else 1.0)))),
             "wards_count": len(meta["raw_cells"]),
             "wards": wards_summary
         })

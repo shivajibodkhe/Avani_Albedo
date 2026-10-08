@@ -23,6 +23,82 @@ let selectedWardId = null;
 let diurnalChartInstance = null;
 let wardMicroChartInstance = null;
 
+// Multi-Currency & Global Economics State
+let currentCurrency = "INR";
+let currentCurrencySymbol = "₹";
+let currentUsdRate = 0.012; // 1 INR = $0.012 USD
+let activeCurrencyDisplayMode = "dual"; // 'dual', 'usd', or 'local'
+
+function formatCurrency(amountInLocal) {
+  if (amountInLocal === undefined || amountInLocal === null || isNaN(amountInLocal)) amountInLocal = 0;
+  const usdAmount = amountInLocal * currentUsdRate;
+
+  // Local currency formatted string
+  let localStr = "";
+  if (currentCurrency === "INR") {
+    const lakhs = amountInLocal / 100000.0;
+    if (lakhs >= 100) {
+      localStr = `₹${(lakhs / 100).toFixed(2)} Cr`;
+    } else {
+      localStr = `₹${lakhs.toFixed(1)}L`;
+    }
+  } else if (currentCurrency === "USD") {
+    if (amountInLocal >= 1000000) {
+      localStr = `$${(amountInLocal / 1000000).toFixed(2)}M`;
+    } else if (amountInLocal >= 1000) {
+      localStr = `$${(amountInLocal / 1000).toFixed(0)}k`;
+    } else {
+      localStr = `$${amountInLocal.toFixed(0)}`;
+    }
+    return `${localStr} USD`;
+  } else {
+    // AED, GBP, SGD, etc.
+    if (amountInLocal >= 1000000) {
+      localStr = `${currentCurrencySymbol}${(amountInLocal / 1000000).toFixed(2)}M`;
+    } else if (amountInLocal >= 1000) {
+      localStr = `${currentCurrencySymbol}${(amountInLocal / 1000).toFixed(0)}k`;
+    } else {
+      localStr = `${currentCurrencySymbol}${amountInLocal.toFixed(0)}`;
+    }
+  }
+
+  // USD formatted string
+  let usdStr = "";
+  if (usdAmount >= 1000000) {
+    usdStr = `$${(usdAmount / 1000000).toFixed(2)}M USD`;
+  } else if (usdAmount >= 1000) {
+    usdStr = `$${(usdAmount / 1000).toFixed(1)}k USD`;
+  } else {
+    usdStr = `$${usdAmount.toFixed(0)} USD`;
+  }
+
+  if (activeCurrencyDisplayMode === 'usd') {
+    return usdStr;
+  } else if (activeCurrencyDisplayMode === 'local') {
+    return localStr;
+  } else {
+    // Dual mode (Default)
+    if (currentCurrency === "USD") return usdStr;
+    return `${localStr} (${usdStr})`;
+  }
+}
+
+function updateBudgetDisplay() {
+  const display = document.getElementById('budget-value-display');
+  const secDisplay = document.getElementById('budget-secondary-display');
+  if (display) {
+    display.textContent = formatCurrency(currentBudgetInr);
+  }
+  if (secDisplay) {
+    if (activeCurrencyDisplayMode === 'dual' && currentCurrency === "INR") {
+      const cr = (currentBudgetInr / 10000000.0).toFixed(2);
+      secDisplay.textContent = `₹${cr} Cr`;
+    } else {
+      secDisplay.textContent = "";
+    }
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   initMap();
   initEventHandlers();
@@ -88,12 +164,29 @@ function initEventHandlers() {
 
   // Budget slider
   const slider = document.getElementById('budget-slider');
-  const budgetDisplay = document.getElementById('budget-value-display');
-  slider.addEventListener('input', (e) => {
-    const lakhs = parseFloat(e.target.value);
-    currentBudgetInr = lakhs * 100000.0;
-    const cr = (lakhs / 100.0).toFixed(2);
-    budgetDisplay.textContent = `₹${lakhs.toFixed(1)} Lakhs (₹${cr} Cr)`;
+  if (slider) {
+    slider.addEventListener('input', (e) => {
+      const lakhs = parseFloat(e.target.value);
+      currentBudgetInr = lakhs * 100000.0;
+      updateBudgetDisplay();
+    });
+  }
+
+  // Multi-Currency Display Mode Toggle
+  document.querySelectorAll('.currency-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeCurrencyDisplayMode = btn.dataset.cur;
+      updateBudgetDisplay();
+      if (currentScenarioResult) {
+        updateKpiCards(currentScenarioResult);
+        renderAllocationsTable(currentScenarioResult);
+      }
+      if (currentActionPlan) {
+        renderActionPlan(currentActionPlan);
+      }
+    });
   });
 
   // Layer toggles
@@ -682,6 +775,13 @@ function populateCityDropdown(countryName) {
 
   currentSelectedCity = citySelect.value;
   populateWardDropdown(currentSelectedCity);
+  const cityObj = countryObj.cities.find(ct => ct.key === currentSelectedCity);
+  if (cityObj) {
+    currentCurrency = cityObj.currency || "INR";
+    currentCurrencySymbol = cityObj.currency_symbol || "₹";
+    currentUsdRate = cityObj.usd_rate || (currentCurrency === "INR" ? 0.012 : (currentCurrency === "AED" ? 0.272 : (currentCurrency === "SGD" ? 0.746 : (currentCurrency === "GBP" ? 1.282 : 1.0))));
+    updateBudgetDisplay();
+  }
 }
 
 function populateWardDropdown(cityName) {
@@ -750,8 +850,14 @@ async function onCityChanged(cityKey) {
     }
   }
 
-  if (cityMeta && map) {
-    map.flyTo(cityMeta.center, cityMeta.zoom, { duration: 1.5 });
+  if (cityMeta) {
+    currentCurrency = cityMeta.currency || "INR";
+    currentCurrencySymbol = cityMeta.currency_symbol || "₹";
+    currentUsdRate = cityMeta.usd_rate || (currentCurrency === "INR" ? 0.012 : (currentCurrency === "AED" ? 0.272 : (currentCurrency === "SGD" ? 0.746 : (currentCurrency === "GBP" ? 1.282 : 1.0))));
+    updateBudgetDisplay();
+    if (map) {
+      map.flyTo(cityMeta.center, cityMeta.zoom, { duration: 1.5 });
+    }
   }
 
   // Reload climate cells and run optimization for the chosen city
@@ -1092,7 +1198,7 @@ function renderInterventionMarkers(scenario) {
           ☂️ Shades: ${alloc.shade_structures}<br>
           💧 Hydration: ${alloc.hydration_stations}<br>
           ❄️ Cooling: -${alloc.cooling_reduction_c}°C<br>
-          💰 Cost: ₹${(alloc.total_cost/100000).toFixed(2)}L
+          💰 Cost: ${formatCurrency(alloc.total_cost)}
         `)
         .addTo(interventionMarkerGroup);
     }
@@ -1121,7 +1227,7 @@ function openCellInspector(cell) {
             <div>💧 Hydration: <b>${alloc.hydration_stations}</b></div>
           </div>
           <div style="margin-top: 6px; font-size: 11px;">
-            Target Cooling: <b style="color: #38bdf8;">-${alloc.cooling_reduction_c}°C</b> | Budget: <b>₹${(alloc.total_cost/100000).toFixed(2)}L</b>
+            Target Cooling: <b style="color: #38bdf8;">-${alloc.cooling_reduction_c}°C</b> | Budget: <b>${formatCurrency(alloc.total_cost)}</b>
           </div>
         </div>
       `;
@@ -1259,11 +1365,10 @@ function updateKpiCards(scenario) {
   document.getElementById('kpi-cooling').textContent = `-${scenario.avg_temp_reduction_c.toFixed(2)} °C`;
   document.getElementById('kpi-max-cooling').textContent = `Peak: -${scenario.max_temp_reduction_c.toFixed(2)} °C in Hotspots`;
   document.getElementById('kpi-beneficiaries').textContent = scenario.total_beneficiaries.toLocaleString();
-  document.getElementById('kpi-budget').textContent = `₹${scenario.budget_spent_lakhs.toFixed(1)} Lakhs`;
+  document.getElementById('kpi-budget').textContent = formatCurrency(scenario.budget_spent_inr);
   
   const pct = ((scenario.budget_spent_inr / scenario.total_budget_inr) * 100).toFixed(1);
-  const cr = (scenario.total_budget_inr / 10000000.0).toFixed(2);
-  document.getElementById('kpi-budget-pct').textContent = `${pct}% of ₹${cr} Cr budget`;
+  document.getElementById('kpi-budget-pct').textContent = `${pct}% of ${formatCurrency(scenario.total_budget_inr)} target`;
   document.getElementById('kpi-exposure').textContent = `${scenario.heat_exposure_reduction_pct.toFixed(1)}%`;
 }
 
@@ -1303,20 +1408,20 @@ function renderActionPlan(plan) {
     </div>
   `).join('');
 
-  // Implementation phases - Guaranteed non-zero spend distribution
+  // Implementation phases - Guaranteed non-zero spend distribution with Multi-Currency
   const timelineContainer = document.getElementById('timeline-container');
-  const totalSpentLakhs = (plan.scenario_result && plan.scenario_result.budget_spent_lakhs > 0)
-    ? plan.scenario_result.budget_spent_lakhs
-    : (currentBudgetInr / 100000.0);
-  const fallbackSpends = [totalSpentLakhs * 0.22, totalSpentLakhs * 0.48, totalSpentLakhs * 0.30];
+  const totalSpentInr = (plan.scenario_result && plan.scenario_result.budget_spent_inr > 0)
+    ? plan.scenario_result.budget_spent_inr
+    : currentBudgetInr;
+  const fallbackSpendsInr = [totalSpentInr * 0.22, totalSpentInr * 0.48, totalSpentInr * 0.30];
 
   timelineContainer.innerHTML = (plan.implementation_phases || []).map((p, idx) => {
-    let spendLakhs = (p.estimated_spend_inr > 0) ? (p.estimated_spend_inr / 100000) : fallbackSpends[idx % 3];
-    if (spendLakhs <= 0 || isNaN(spendLakhs)) spendLakhs = fallbackSpends[idx % 3];
+    let spendInr = (p.estimated_spend_inr > 0) ? p.estimated_spend_inr : fallbackSpendsInr[idx % 3];
+    if (spendInr <= 0 || isNaN(spendInr)) spendInr = fallbackSpendsInr[idx % 3];
     return `
       <div class="phase-card">
         <div class="phase-title">${p.phase}</div>
-        <div class="phase-time">⏱️ ${p.timeline} • Estimated Spend: <b>₹${spendLakhs.toFixed(1)}L</b></div>
+        <div class="phase-time">⏱️ ${p.timeline} • Estimated Spend: <b>${formatCurrency(spendInr)}</b></div>
         <ul class="phase-milestones">
           ${p.key_milestones.map(m => `<li>${m}</li>`).join('')}
         </ul>
@@ -1342,7 +1447,7 @@ function renderAllocationsTable(scenario) {
     <span>🏢 Cool Roofs: <b>${(scenario.total_cool_roof_sqft).toLocaleString()} sq ft</b></span>
     <span>☂️ Shades: <b>${scenario.total_shades}</b></span>
     <span>💧 Hydration: <b>${scenario.total_hydration}</b></span>
-    <span>💰 Total Spend: <b>₹${scenario.budget_spent_lakhs}L</b></span>
+    <span>💰 Total Spend: <b>${formatCurrency(scenario.budget_spent_inr)}</b></span>
   `;
 
   const tbody = document.getElementById('allocations-table-body');
@@ -1355,7 +1460,7 @@ function renderAllocationsTable(scenario) {
       <td>${a.shade_structures > 0 ? a.shade_structures : '-'}</td>
       <td>${a.hydration_stations > 0 ? a.hydration_stations : '-'}</td>
       <td style="color: #38bdf8; font-weight: 600;">-${a.cooling_reduction_c}°C</td>
-      <td><b>₹${(a.total_cost/100000).toFixed(2)}</b></td>
+      <td><b>${formatCurrency(a.total_cost)}</b></td>
     </tr>
   `).join('');
 }
@@ -1375,7 +1480,7 @@ function renderComparisonGrid(scenarios) {
         </div>
         <div class="comp-metric-item">
           <small>Budget Used</small>
-          <strong>₹${s.budget_spent_lakhs}L</strong>
+          <strong>${formatCurrency(s.budget_spent_inr || (s.budget_spent_lakhs * 100000))}</strong>
         </div>
         <div class="comp-metric-item">
           <small>Exposure Drop</small>

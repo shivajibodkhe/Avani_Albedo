@@ -151,9 +151,18 @@
       </div>
 
       <div class="panel-section">
-        <div class="slider-header">
-          <h3 class="section-title">💰 Intervention Budget</h3>
-          <span class="budget-display" id="budget-value-display">₹100.0 Lakhs (₹1.00 Cr)</span>
+        <div class="slider-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <h3 class="section-title" style="margin: 0;">💰 Municipal Budget</h3>
+          <!-- Multi-Currency Display Toggle -->
+          <div class="currency-toggle-group" id="currency-toggle-group" title="Select Currency Display Mode">
+            <button class="currency-btn active" data-cur="dual" title="Show Local Currency and $ USD Equivalent">🌐 Dual</button>
+            <button class="currency-btn" data-cur="usd" title="Show amounts in US Dollars ($)">💵 $ USD</button>
+            <button class="currency-btn" data-cur="local" title="Show in Country's Local Currency">🏛️ Local</button>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+          <span class="budget-display" id="budget-value-display">₹100.0 Lakhs ($120.0k USD)</span>
+          <span id="budget-secondary-display" style="font-size: 11px; color: var(--color-cyan); font-weight: 600;">₹1.00 Cr</span>
         </div>
         <input type="range" id="budget-slider" min="10" max="500" step="5" value="100" class="custom-slider">
         <div class="slider-markers">

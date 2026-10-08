@@ -1644,3 +1644,36 @@ body.dark-theme {
   margin: 0;
 }
 
+/* ================= MULTI-CURRENCY TOGGLE ================= */
+.currency-toggle-group {
+  display: flex;
+  background: rgba(2, 6, 23, 0.75);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.currency-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.currency-btn:hover {
+  color: #fff;
+}
+
+.currency-btn.active {
+  background: rgba(56, 189, 248, 0.25);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+}
+
+
