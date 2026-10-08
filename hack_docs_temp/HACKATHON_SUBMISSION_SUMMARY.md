@@ -17,12 +17,32 @@
 
 While traditional GIS platforms merely observe heat hotspots, Avani Albedo computes a 6-factor normalized **Heat Vulnerability Index (HVI)** across metropolitan wards and leverages Google OR-Tools to solve a multi-objective Mixed-Integer Linear Program (MIP), finding the mathematical Pareto-optimal distribution of cooling interventions under municipal budget limits.
 
-### How we leverage the Google Cloud Stack:
-1. **Cloud Run:** Hosts our high-performance containerized FastAPI backend and Google OR-Tools solver on serverless infrastructure, executing complex combinatorial optimization across urban wards in under 50 milliseconds with auto-scaling resilience.
-2. **Vertex AI / Gemini:** Serves as our Prescriptive Climate Action Agent. Gemini 2.5 Flash analyzes spatial vulnerability metrics, budget constraints, and solver allocations to generate explainable, audit-ready municipal climate action plans—including thermodynamic rationale, prioritized ward justifications, and a 3-phase implementation roadmap.
-3. **Cloud Firestore:** Acts as our operational database in Native Mode, storing climate action plans, ward intervention allocations, and audit history (`avani_scenarios` and `avani_audit` collections), enabling continuous tracking and municipal review.
-4. **Firebase (Hosting & Auth):** Delivers a high-performance, edge-cached dark-mode GIS web interface powered by Leaflet and high-resolution satellite imagery, with reverse-proxy routing to Cloud Run APIs and secure administrative authentication.
-5. **Google Earth Engine & BigQuery:** Integrates Landsat 8/9 thermal infrared (LST) and Sentinel-2 multi-spectral composites (NDVI, NDBI, Albedo) with BigQuery GEOGRAPHY joins across vulnerable urban infrastructure (schools, hospitals, transit terminals).
+### Hackathon Track Alignment:
+- **Track Theme:** Sustainability & Social Impact
+- **Problem Statement:** AI-powered solution addressing environmental resilience, resource optimization, climate intelligence, and vulnerable community protection.
+- **Suggested Solution Directions Covered:** Climate and environmental intelligence, disaster preparedness, resource optimization, accessibility, community services, heat hazard early warning.
+
+### Complete 8-Technology Google Cloud Architecture Matrix:
+1. **Gemini on Vertex AI:** Generates prescriptive, persona-adaptive municipal climate action plans (Municipal Commissioner, Public Health Officer, Urban Planner) with thermodynamic justifications, prioritized ward interventions, and 3-phase implementation roadmaps.
+2. **BigQuery (Spatial SQL):** Geospatial database executing `ST_GEOGFROMTEXT` and `ST_INTERSECTS` queries across millions of multi-temporal satellite pixels and ward demographic census tracts.
+3. **Vertex AI Predictive Models:** Machine learning models forecasting micro-climate heat persistence, 24-hour diurnal thermal curves, and hazard hours exceeding 38°C.
+4. **Google Earth Engine (GEE):** Planetary-scale multi-spectral image processing ingesting raw Landsat 8/9 TIRS and Sentinel-2 MSI granules to compute real-time Land Surface Temperature (LST), NDVI, and NDBI rasters.
+5. **Cloud Storage (GCS):** Scalable bucket storage for multi-temporal GeoTIFF tiles, city boundary GeoJSONs, and historical 12-year decadal timelapse layers.
+6. **Vision AI:** Automated aerial and drone image analysis to classify rooftop material types (asphalt, concrete, corrugated metal) and audit Solar Reflectance Index (SRI) retrofit suitability.
+7. **Cloud Run:** Serverless containerized deployment auto-scaling the FastAPI resilience backend and Google OR-Tools Mixed-Integer Linear Programming (MILP) solver in sub-50 milliseconds.
+8. **Pub/Sub:** Event-driven asynchronous messaging pipeline that streams real-time heatwave alerts to municipal emergency dispatch teams, mobile drinking water tankers, and hospital syndromic systems.
+
+### Physical Land Feasibility & Carrying Capacity Validation:
+- **The Challenge:** Dense urban wards feature 85% to 98% concrete coverage, limiting open soil for tree planting.
+- **The Avani Albedo Solution:** 
+  1. Computes the verified permeable ground footprint (road medians, institutional schoolyards, park setbacks).
+  2. Enforces a strict physical root-zone bound of **16 m² per mature canopy tree**.
+  3. When ward soil carrying capacity is reached, Google OR-Tools automatically redirects remaining cooling budget to **High-Albedo Cool Roofs** (which require **0 m² of ground soil**) and solar tensile shade canopies, ensuring 100% physically realizable municipal plans.
+
+### Google Earth Decadal Historical Timelapse Engine (2014 – 2026):
+- Ingests 12 years of historical earth observation telemetry (Landsat 8/9 TIRS & Sentinel-2 MSI).
+- Interactive animated playback showing the +8.6°C temperature rise, cumulative loss of 49,200 mature trees, and expansion of concrete from 62% to 89%.
+- Real-time visualization of Avani's restorative replenishment targets (50,000 trees + 1,200,000 sq ft zero-soil cool roofs).
 
 ---
 

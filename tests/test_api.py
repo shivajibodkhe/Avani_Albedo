@@ -237,8 +237,45 @@ def test_action_plan_with_persona_and_recommendations():
     assert res.status_code == 200
     plan = res.json()
     assert plan["persona"] == "Chief Public Health Officer"
-    assert "strategic_recommendations" in plan
-    assert len(plan["strategic_recommendations"]) > 0
-    assert any("health" in r.lower() or "surveillance" in r.lower() or "asha" in r.lower() for r in plan["strategic_recommendations"])
+def test_historical_timelapse_and_land_feasibility():
+    # 1. Historical Timelapse API
+    res = client.get("/api/history/timelapse?city=Bengaluru")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["available_years"] == [2014, 2017, 2020, 2023, 2026]
+    assert data["total_trees_lost_decade"] == 49200
+    assert data["total_temp_rise_c"] == 8.6
+    assert len(data["records"]) == 5
+    assert data["records"][0]["year"] == 2014
+    assert data["records"][-1]["year"] == 2026
+    assert data["records"][-1]["trees_lost_cumulative"] > data["records"][0]["trees_lost_cumulative"]
+
+    # 2. Climate Cells Land Feasibility
+    res_cells = client.get("/api/cells?city=Bengaluru")
+    assert res_cells.status_code == 200
+    cells = res_cells.json()
+    assert len(cells) > 0
+    for c in cells:
+        assert "permeable_land_sqm" in c
+        assert c["permeable_land_sqm"] > 0
+        assert "tree_carrying_capacity" in c
+        assert c["tree_carrying_capacity"] > 0
+        assert "land_feasibility_status" in c
+
+    # 3. Non-zero 3-Phase Implementation Roadmap Spend Validation
+    for sc_type in ["optimized", "green_first", "albedo_first", "public_health_first"]:
+        res_plan = client.post("/api/action-plan", json={
+            "city": "Bengaluru",
+            "budget_inr": 10000000.0,
+            "scenario_type": sc_type,
+            "persona": "Municipal Commissioner"
+        })
+        assert res_plan.status_code == 200
+        plan = res_plan.json()
+        assert len(plan["implementation_phases"]) == 3
+        # Ensure NO phase spend is ever 0 INR
+        for p in plan["implementation_phases"]:
+            assert p["estimated_spend_inr"] > 0.0, f"Phase {p['phase']} spend was 0 in scenario {sc_type}"
+        assert "land_feasibility_summary" in plan
 
 

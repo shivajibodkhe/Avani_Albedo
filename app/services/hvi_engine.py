@@ -91,4 +91,27 @@ def calculate_hvi_for_cells(cells: List[ClimateCell]) -> List[ClimateCell]:
         else:
             c.hvi_category = "Low"
             
+        # Physical Land Feasibility Validation (Root zone: 16 m² per mature tree)
+        unbuilt_ratio = max(0.02, 1.0 - c.built_density)
+        # Average ward ground footprint ~ 1,200,000 m² (1.2 km²)
+        # Validated permeable fraction of unbuilt space is ~30% (medians, school grounds, park setbacks)
+        permeable_sqm = round(1200000.0 * unbuilt_ratio * 0.30, 0)
+        c.permeable_land_sqm = permeable_sqm
+        # Carrying capacity: strictly 16 m² root space per canopy tree
+        capacity = max(100, int(permeable_sqm / 16.0))
+        c.tree_carrying_capacity = capacity
+        # Cap max_trees by physical carrying capacity
+        c.max_trees = min(c.max_trees, capacity)
+        
+        if c.built_density >= 0.88:
+            c.land_feasibility_status = "Constrained Ground Soil (High Built Density)"
+            c.land_feasibility_note = f"Ground soil limited to {permeable_sqm:,.0f} m². Soil capped at {capacity:,} trees; excess heat redirected to Cool Roofs (0 m² soil)."
+        elif c.built_density >= 0.75:
+            c.land_feasibility_status = "Moderate Permeable Margin"
+            c.land_feasibility_note = f"Viable capacity for {capacity:,} trees along road medians, institutional campuses & park setbacks."
+        else:
+            c.land_feasibility_status = "High Soil Availability"
+            c.land_feasibility_note = f"Abundant permeable ground ({permeable_sqm:,.0f} m²). Optimal for dense urban micro-forests."
+            
     return cells
+

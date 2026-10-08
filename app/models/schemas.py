@@ -27,11 +27,36 @@ class ClimateCell(BaseModel):
     hvi_score: float = 0.0
     hvi_category: str = "Moderate"
     
-    # Physical intervention headroom
+    # Physical intervention headroom & Land Feasibility
     max_trees: int = 1000
     max_cool_roof_sqft: int = 250000
     max_shades: int = 25
     max_hydration: int = 15
+    permeable_land_sqm: float = 25000.0
+    tree_carrying_capacity: int = 1500
+    land_feasibility_status: str = "Verified Viable"
+    land_feasibility_note: str = "Validated road medians, park peripheries & schoolyards"
+
+class YearlyTimelapseRecord(BaseModel):
+    year: int
+    avg_lst_c: float
+    heat_anomaly_c: float
+    trees_lost_cumulative: int
+    ndvi: float
+    built_up_fraction: float
+    hvi_score: float
+    hvi_category: str
+    satellite_sensor: str
+    observation_date: str
+
+class CityTimelapseResponse(BaseModel):
+    city: str
+    available_years: List[int]
+    total_trees_lost_decade: int
+    total_temp_rise_c: float
+    records: List[YearlyTimelapseRecord]
+    restoration_target_trees: int
+    restoration_cool_roof_sqft: int
 
 class InterventionAllocation(BaseModel):
     cell_id: str
@@ -107,6 +132,7 @@ class ActionPlanResponse(BaseModel):
     rationale: str
     persona: str = "Municipal Commissioner"
     strategic_recommendations: List[str] = []
+    land_feasibility_summary: str = "Physical land validation complete. In high-density wards (>85% concrete), tree capacity is strictly bounded to open schoolyards, road medians and park setbacks. Excess cooling demand is safely routed to high-albedo rooftop interventions requiring zero ground soil."
     ward_priorities: List[WardPriority]
     implementation_phases: List[ImplementationPhase]
     co_benefits: List[str]

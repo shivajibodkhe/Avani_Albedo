@@ -12,13 +12,15 @@ from app.config import settings
 from app.models.schemas import (
     ClimateCell, ScenarioRequest, ScenarioResult,
     ActionPlanResponse, SystemStatusResponse,
-    LoginRequest, LoginResponse, TemperatureTimelineResponse
+    LoginRequest, LoginResponse, TemperatureTimelineResponse,
+    CityTimelapseResponse
 )
 from app.data.bengaluru_heat_data import get_bengaluru_climate_cells
 from app.data.cities_heat_data import (
     get_geographic_hierarchy,
     get_climate_cells_for_city,
     get_temperature_timeline,
+    get_city_timelapse_data,
     CITIES_REGISTRY
 )
 from app.services.hvi_engine import calculate_hvi_for_cells
@@ -157,6 +159,14 @@ def get_temperature_timeline_data(
     and 7-day heatwave forecast for the selected city or specific ward.
     """
     return get_temperature_timeline(city_name=city, cell_id=cell_id)
+
+@app.get("/api/history/timelapse", response_model=CityTimelapseResponse)
+def get_historical_timelapse(city: str = Query("Bengaluru", description="Target city for satellite timelapse")):
+    """
+    Returns 2014-2026 multi-year satellite timelapse telemetry for the target city,
+    tracking surface temperature rise, cumulative mature tree loss, and urban built densification.
+    """
+    return get_city_timelapse_data(city_name=city)
 
 @app.get("/api/scenarios/history")
 def get_scenario_history(limit: int = Query(5, description="Number of recent plans to fetch")):
