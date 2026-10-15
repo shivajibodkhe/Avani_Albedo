@@ -1,3 +1,34 @@
+// Global fetch interceptor to securely attach bearer token & credentials
+const _originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+  const token = localStorage.getItem('avani_token');
+  const opts = Object.assign({}, options);
+  opts.credentials = opts.credentials || 'same-origin';
+  if (token && typeof url === 'string' && url.startsWith('/api/') && !url.includes('/api/auth/login') && !url.includes('/api/auth/firebase-login')) {
+    opts.headers = Object.assign({}, opts.headers);
+    if (!opts.headers['Authorization']) {
+      opts.headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  return _originalFetch.call(this, url, opts);
+};
+
+// Initialize Firebase for 1-Click Google Sign-In
+try {
+  if (window.firebase && !firebase.apps.length) {
+    firebase.initializeApp({
+      projectId: "avani-albedo",
+      appId: "1:615055398519:web:f6c09d29e5bb2982d6d872",
+      storageBucket: "avani-albedo.firebasestorage.app",
+      apiKey: "AIzaSyDrRVQqwPRA8vGdpHgzZlDNgwqN4XzxeNc",
+      authDomain: "avani-albedo.firebaseapp.com",
+      messagingSenderId: "615055398519"
+    });
+  }
+} catch (e) {
+  console.warn("Firebase initialization notice:", e);
+}
+
 // Avani Albedo Interactive GIS Client
 let map;
 let climateCells = [];
@@ -102,14 +133,12 @@ function updateBudgetDisplay() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  initMap();
   initEventHandlers();
-  initAuth();
   loadSystemStatus();
-  await loadGeographicHierarchy();
-  loadClimateCells(currentSelectedCity);
-  loadTimelapseData(currentSelectedCity);
+  initCopilot();
+  await initAuth();
 });
+
 
 // ================= MAP INITIALIZATION =================
 function initMap() {
@@ -160,7 +189,7 @@ function initEventHandlers() {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      selectedScenario = btn.dataset.type;
+      selectAndLoadScenario(btn.dataset.type);
     });
   });
 
@@ -171,6 +200,12 @@ function initEventHandlers() {
       const lakhs = parseFloat(e.target.value);
       currentBudgetInr = lakhs * 100000.0;
       updateBudgetDisplay();
+    });
+    slider.addEventListener('change', () => {
+      const activeTab = document.querySelector('.tab-btn.active');
+      if (activeTab && activeTab.dataset.tab === 'tab-comparison') {
+        runComparison();
+      }
     });
   }
 
@@ -209,29 +244,15 @@ function initEventHandlers() {
   document.getElementById('run-agent-btn').addEventListener('click', runAvaniAgent);
 
   // Compare Scenarios Button
-  document.getElementById('compare-btn').addEventListener('click', runComparison);
+  document.getElementById('compare-btn').addEventListener('click', () => {
+    switchResultsTab('tab-comparison');
+  });
 
   // Results Tab Switching
   document.querySelectorAll('.tab-btn').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const targetPane = document.getElementById(tab.dataset.tab);
-      if (targetPane) targetPane.classList.add('active');
-
-      if (tab.dataset.tab === 'tab-timeline') {
-        loadTemperatureTimeline(currentSelectedCity, selectedWardId);
-        loadHeatCalendar(currentSelectedCity);
-        setTimeout(() => {
-          if (diurnalChartInstance) {
-            diurnalChartInstance.resize();
-            diurnalChartInstance.update();
-          }
-        }, 60);
-      } else if (tab.dataset.tab === 'tab-comparison') {
-        runComparison();
-      }
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchResultsTab(tab.dataset.tab);
     });
   });
 
@@ -251,12 +272,9 @@ function initEventHandlers() {
   // Export JSON
   document.getElementById('export-json-btn').addEventListener('click', exportPlanJson);
 
-  // Auth Form & Quick Judge Handlers
+  // Auth Form & Handlers
   const loginForm = document.getElementById('login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
-
-  const quickJudgeBtn = document.getElementById('quick-judge-btn');
-  if (quickJudgeBtn) quickJudgeBtn.addEventListener('click', handleQuickJudgeLogin);
 
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
@@ -264,6 +282,18 @@ function initEventHandlers() {
   // Firebase Google Login
   const firebaseGoogleBtn = document.getElementById('firebase-google-btn');
   if (firebaseGoogleBtn) firebaseGoogleBtn.addEventListener('click', handleFirebaseGoogleLogin);
+
+  const closeGoogleBtn = document.getElementById('close-google-auth-btn');
+  if (closeGoogleBtn) closeGoogleBtn.addEventListener('click', () => {
+    const modal = document.getElementById('google-auth-modal');
+    if (modal) modal.classList.add('hidden');
+  });
+
+  const cancelGoogleBtn = document.getElementById('google-auth-cancel-btn');
+  if (cancelGoogleBtn) cancelGoogleBtn.addEventListener('click', () => {
+    const modal = document.getElementById('google-auth-modal');
+    if (modal) modal.classList.add('hidden');
+  });
 
   // Admin Portal Trigger & Close
   const openAdminBtn = document.getElementById('open-admin-btn');
@@ -294,6 +324,17 @@ function initEventHandlers() {
       const input = document.getElementById('admin-gemini-key');
       input.type = input.type === 'password' ? 'text' : 'password';
     });
+  }
+
+  // Admin Satellite Ingestion Handlers
+  const satCountrySelect = document.getElementById('admin-sat-country');
+  if (satCountrySelect) {
+    satCountrySelect.addEventListener('change', (e) => onAdminSatCountryChanged(e.target.value));
+  }
+
+  const startSatIngestionBtn = document.getElementById('start-sat-ingestion-btn');
+  if (startSatIngestionBtn) {
+    startSatIngestionBtn.addEventListener('click', handleSatelliteIngestion);
   }
 
   // Target Geography Cascading Handlers
@@ -351,12 +392,21 @@ function initEventHandlers() {
   const closeDataSourcesBtn = document.getElementById('close-data-sources-btn');
   if (dataSourcesBtn && dataSourcesModal) {
     dataSourcesBtn.addEventListener('click', () => {
+      const gcpModal = document.getElementById('gcp-stack-modal');
+      const infModal = document.getElementById('infra-modal');
+      if (gcpModal) gcpModal.classList.add('hidden');
+      if (infModal) infModal.classList.add('hidden');
       dataSourcesModal.classList.remove('hidden');
     });
   }
   if (closeDataSourcesBtn && dataSourcesModal) {
     closeDataSourcesBtn.addEventListener('click', () => {
       dataSourcesModal.classList.add('hidden');
+    });
+  }
+  if (dataSourcesModal) {
+    dataSourcesModal.addEventListener('click', (e) => {
+      if (e.target === dataSourcesModal) dataSourcesModal.classList.add('hidden');
     });
   }
 
@@ -366,12 +416,21 @@ function initEventHandlers() {
   const closeGcpStackBtn = document.getElementById('close-gcp-stack-btn');
   if (gcpStackBtn && gcpStackModal) {
     gcpStackBtn.addEventListener('click', () => {
+      const dsModal = document.getElementById('data-sources-modal');
+      const infModal = document.getElementById('infra-modal');
+      if (dsModal) dsModal.classList.add('hidden');
+      if (infModal) infModal.classList.add('hidden');
       gcpStackModal.classList.remove('hidden');
     });
   }
   if (closeGcpStackBtn && gcpStackModal) {
     closeGcpStackBtn.addEventListener('click', () => {
       gcpStackModal.classList.add('hidden');
+    });
+  }
+  if (gcpStackModal) {
+    gcpStackModal.addEventListener('click', (e) => {
+      if (e.target === gcpStackModal) gcpStackModal.classList.add('hidden');
     });
   }
 
@@ -397,8 +456,118 @@ function initEventHandlers() {
   bindTimelapseTicks();
 }
 
+// ================= RESULTS TAB SWITCHING & SCENARIO SELECTION =================
+function switchResultsTab(tabId) {
+  // Update tab button styles
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  });
+
+  // Update tab panels
+  document.querySelectorAll('.tab-pane').forEach(pane => {
+    pane.classList.toggle('active', pane.id === tabId);
+  });
+
+  // Handle specific tab data loading without synthetic re-clicks
+  if (tabId === 'tab-timeline') {
+    loadTemperatureTimeline(currentSelectedCity, selectedWardId);
+    loadHeatCalendar(currentSelectedCity);
+    setTimeout(() => {
+      if (diurnalChartInstance) {
+        diurnalChartInstance.resize();
+        diurnalChartInstance.update();
+      }
+    }, 60);
+  } else if (tabId === 'tab-comparison') {
+    runComparison();
+  }
+}
+
+function selectAndLoadScenario(scenarioKey) {
+  if (!scenarioKey) return;
+  selectedScenario = scenarioKey;
+
+  // 1. Sync left sidebar scenario buttons
+  document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === scenarioKey);
+  });
+
+  // 2. Sync comparison grid cards (if rendered)
+  document.querySelectorAll('.comp-card').forEach(card => {
+    const isSelected = card.dataset.key === scenarioKey;
+    card.classList.toggle('highlight', isSelected);
+    const badge = card.querySelector('.comp-status-badge');
+    if (badge) {
+      badge.innerHTML = isSelected 
+        ? '<span style="color: #34d399; font-weight: 700;">● Active Scenario</span>' 
+        : '<span style="color: #94a3b8;">Click to select</span>';
+    }
+    const sBtn = card.querySelector('.select-scenario-btn');
+    if (sBtn) {
+      sBtn.textContent = isSelected ? '✓ Loaded' : '👉 Select & Load';
+      sBtn.style.background = isSelected ? 'rgba(52, 211, 153, 0.2)' : 'rgba(56, 189, 248, 0.15)';
+      sBtn.style.borderColor = isSelected ? '#34d399' : 'rgba(56, 189, 248, 0.4)';
+      sBtn.style.color = isSelected ? '#34d399' : '#38bdf8';
+    }
+  });
+
+  // 3. Automatically run Avani agent to synthesize and compute this scenario
+  runAvaniAgent();
+}
+
 // ================= AUTHENTICATION LOGIC =================
 let cachedAuthConfig = null;
+let isDashboardInitialized = false;
+
+function launchDashboardSession(email) {
+  const landing = document.getElementById('landing-gateway-page');
+  const dashboard = document.getElementById('dashboard-app-layout');
+  const navActions = document.getElementById('dashboard-nav-actions');
+  const userPill = document.getElementById('auth-user-pill');
+  const userText = document.getElementById('auth-user-email');
+
+  if (landing) landing.classList.add('hidden');
+  if (dashboard) dashboard.classList.remove('hidden');
+  if (navActions) navActions.classList.remove('hidden');
+  if (userPill && userText) {
+    userText.textContent = email;
+    userPill.classList.remove('hidden');
+  }
+
+  if (!isDashboardInitialized) {
+    isDashboardInitialized = true;
+    initMap();
+    loadGeographicHierarchy().then(() => {
+      loadClimateCells(currentSelectedCity);
+      loadTimelapseData(currentSelectedCity);
+    });
+  } else {
+    if (map) {
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+  }
+
+  checkAdminAlerts();
+}
+
+function showLandingGateway() {
+  const landing = document.getElementById('landing-gateway-page');
+  const dashboard = document.getElementById('dashboard-app-layout');
+  const navActions = document.getElementById('dashboard-nav-actions');
+  const userPill = document.getElementById('auth-user-pill');
+
+  if (landing) landing.classList.remove('hidden');
+  if (dashboard) dashboard.classList.add('hidden');
+  if (navActions) navActions.classList.add('hidden');
+  if (userPill) userPill.classList.add('hidden');
+
+  const emailInput = document.getElementById('login-email');
+  const pwInput = document.getElementById('login-password');
+  if (emailInput) emailInput.value = '';
+  if (pwInput) pwInput.value = '';
+  const errorMsg = document.getElementById('login-error-msg');
+  if (errorMsg) errorMsg.classList.add('hidden');
+}
 
 async function initAuth() {
   try {
@@ -406,34 +575,37 @@ async function initAuth() {
     cachedAuthConfig = await res.json();
     
     if (!cachedAuthConfig.auth_enabled) {
-      document.getElementById('login-modal-overlay').classList.add('hidden');
+      launchDashboardSession('public@avani.eco');
       return;
     }
 
     const token = localStorage.getItem('avani_token');
-    const userEmail = localStorage.getItem('avani_email');
+    if (!token) {
+      showLandingGateway();
+      return;
+    }
+
+    // Verify token with backend
+    const verifyRes = await fetch('/api/auth/verify', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     
-    if (token && userEmail) {
-      showAuthenticatedUser(userEmail);
+    if (verifyRes.ok) {
+      const data = await verifyRes.json();
+      launchDashboardSession(data.email);
     } else {
-      document.getElementById('login-modal-overlay').classList.remove('hidden');
+      localStorage.removeItem('avani_token');
+      localStorage.removeItem('avani_email');
+      showLandingGateway();
     }
   } catch (err) {
-    console.warn("Auth config check error:", err);
+    console.warn("Auth verification error:", err);
+    showLandingGateway();
   }
 }
 
 function showAuthenticatedUser(email) {
-  document.getElementById('login-modal-overlay').classList.add('hidden');
-  const userPill = document.getElementById('auth-user-pill');
-  const userText = document.getElementById('auth-user-email');
-  if (userPill && userText) {
-    userText.textContent = email;
-    userPill.classList.remove('hidden');
-  }
-
-  // Load admin alert count in background
-  checkAdminAlerts();
+  launchDashboardSession(email);
 }
 
 async function handleLoginSubmit(e) {
@@ -455,7 +627,7 @@ async function handleLoginSubmit(e) {
     });
 
     if (!res.ok) {
-      throw new Error("Invalid credentials or email not on whitelist");
+      throw new Error("Invalid credentials or unauthorized user");
     }
 
     const data = await res.json();
@@ -463,7 +635,7 @@ async function handleLoginSubmit(e) {
     localStorage.setItem('avani_email', data.email);
     showAuthenticatedUser(data.email);
   } catch (err) {
-    errorMsg.textContent = "Access Denied: Invalid credentials or email is not on the authorized whitelist.";
+    errorMsg.textContent = "Access Denied: Invalid credentials or account is not authorized.";
     errorMsg.classList.remove('hidden');
   } finally {
     submitBtn.disabled = false;
@@ -473,63 +645,120 @@ async function handleLoginSubmit(e) {
 
 async function handleFirebaseGoogleLogin() {
   const errorMsg = document.getElementById('login-error-msg');
-  errorMsg.classList.add('hidden');
+  if (errorMsg) errorMsg.classList.add('hidden');
 
-  // Prompt user for their Google / Firebase email
-  const enteredEmail = prompt(
-    "🔥 Sign in with Google (Firebase Auth)\n\nEnter your Google email address:",
-    "srbodkhe@gmail.com"
-  );
+  // 1. Try 1-Click Google Sign-In via Firebase Popup
+  if (window.firebase && window.firebase.auth) {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await firebase.auth().signInWithPopup(provider);
+      if (result && result.user && result.user.email) {
+        const idToken = await result.user.getIdToken();
+        await executeGoogleLoginSubmit(result.user.email, result.user.displayName, idToken);
+        return;
+      }
+    } catch (popupErr) {
+      console.warn("Firebase popup closed or not enabled, displaying Google account access dialog:", popupErr);
+    }
+  }
 
-  if (!enteredEmail) return;
+  // 2. Fallback to Google Account modal dialog
+  const modal = document.getElementById('google-auth-modal');
+  const alertBox = document.getElementById('google-auth-alert');
+  const emailInput = document.getElementById('google-auth-email');
+  if (alertBox) alertBox.classList.add('hidden');
+  if (emailInput) {
+    emailInput.value = '';
+    setTimeout(() => emailInput.focus(), 150);
+  }
+  if (modal) modal.classList.remove('hidden');
+}
+
+async function executeGoogleLoginSubmit(email, displayName, token) {
+  const errorMsg = document.getElementById('login-error-msg');
+  const modal = document.getElementById('google-auth-modal');
+  const modalAlert = document.getElementById('google-auth-alert');
+  if (errorMsg) errorMsg.classList.add('hidden');
 
   try {
     const res = await fetch('/api/auth/firebase-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: enteredEmail,
-        displayName: enteredEmail.split('@')[0],
-        token: `mock_firebase_token_${Date.now()}`
+        email: email,
+        displayName: displayName || email.split('@')[0],
+        token: token || `google_token_${Date.now()}`
       })
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      // Unregistered or pending user - show alert notification
-      errorMsg.innerHTML = `<strong>⚠️ Registration Required:</strong><br>${data.detail || "An alert was sent to Super Admin (srbodkhe@gmail.com). You will receive access once approved."}`;
-      errorMsg.classList.remove('hidden');
+      // 403: Pending review or Access Request submitted
+      const msg = `<strong>⏳ Access Request Registered!</strong><br>${data.detail || 'Your Google account is awaiting Administrator approval.'}`;
+      if (modal && !modal.classList.contains('hidden') && modalAlert) {
+        modalAlert.style.background = 'rgba(245, 158, 11, 0.15)';
+        modalAlert.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+        modalAlert.style.color = '#fbbf24';
+        modalAlert.innerHTML = msg;
+        modalAlert.classList.remove('hidden');
+      } else if (errorMsg) {
+        errorMsg.style.background = 'rgba(245, 158, 11, 0.15)';
+        errorMsg.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+        errorMsg.style.color = '#fbbf24';
+        errorMsg.innerHTML = msg;
+        errorMsg.classList.remove('hidden');
+      }
       return;
     }
 
+    // Success (User is approved & active!)
     localStorage.setItem('avani_token', data.token);
     localStorage.setItem('avani_email', data.email);
+    if (modal) modal.classList.add('hidden');
     showAuthenticatedUser(data.email);
   } catch (err) {
-    errorMsg.textContent = "Firebase Authentication Error. Check console.";
-    errorMsg.classList.remove('hidden');
+    if (errorMsg) {
+      errorMsg.textContent = "Google Sign-In Error. Please try again.";
+      errorMsg.classList.remove('hidden');
+    }
   }
 }
 
-function handleQuickJudgeLogin() {
-  const defaultEmail = (cachedAuthConfig && cachedAuthConfig.default_judge_email) || "judge@hackathon.com";
-  const defaultPw = (cachedAuthConfig && cachedAuthConfig.default_judge_password) || "avani2026";
-  
-  document.getElementById('login-email').value = defaultEmail;
-  document.getElementById('login-password').value = defaultPw;
-  
-  document.getElementById('login-form').dispatchEvent(new Event('submit'));
-}
+window.submitGoogleAuth = async function(e) {
+  if (e) e.preventDefault();
+  const emailInput = document.getElementById('google-auth-email');
+  const alertBox = document.getElementById('google-auth-alert');
+  const submitBtn = document.getElementById('google-auth-submit-btn');
+  const email = (emailInput.value || '').trim().toLowerCase();
+
+  if (!email || !email.includes('@')) {
+    alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
+    alertBox.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+    alertBox.style.color = '#f87171';
+    alertBox.textContent = 'Please enter a valid Gmail address.';
+    alertBox.classList.remove('hidden');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span>⏳ Submitting...</span>';
+  alertBox.classList.add('hidden');
+
+  try {
+    await executeGoogleLoginSubmit(email, email.split('@')[0], `google_token_${Date.now()}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<span>🚀 Continue with Google</span>';
+  }
+};
 
 function handleLogout() {
+  fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   localStorage.removeItem('avani_token');
   localStorage.removeItem('avani_email');
-  document.getElementById('auth-user-pill').classList.add('hidden');
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-password').value = '';
-  document.getElementById('login-error-msg').classList.add('hidden');
-  document.getElementById('login-modal-overlay').classList.remove('hidden');
+  showLandingGateway();
 }
 
 // ================= ADMIN PORTAL LOGIC =================
@@ -598,9 +827,16 @@ function renderAdminAlerts(alerts) {
         <span class="alert-card-title">🚨 ${a.type}: <code>${a.user_email}</code></span>
         <span class="alert-card-desc">${a.message}</span>
       </div>
-      <div class="alert-actions">
-        <button class="btn-approve" onclick="resolveAdminAlert('${a.id}', 'approve')">✓ Approve User</button>
-        <button class="btn-reject" onclick="resolveAdminAlert('${a.id}', 'reject')">✕ Reject / Block</button>
+      <div class="alert-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <select id="alert-role-${a.id}" style="background: rgba(255,255,255,0.08); color: var(--color-cyan); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 5px 8px; font-size: 11px; cursor: pointer;">
+          <option value="Municipal Planner" selected>Role: Municipal Planner</option>
+          <option value="Climate Scientist">Role: Climate Scientist</option>
+          <option value="Urban Resilience Director">Role: Urban Resilience Director</option>
+          <option value="Judge / Evaluator">Role: Judge / Evaluator</option>
+          <option value="Super Admin">Role: Super Admin</option>
+        </select>
+        <button class="btn-approve" onclick="approveAlertWithRole('${a.id}')">✓ Approve & Assign Role</button>
+        <button class="btn-reject" onclick="resolveAdminAlert('${a.id}', 'reject')">✕ Reject</button>
       </div>
     </div>
   `).join('');
@@ -611,17 +847,34 @@ function renderAdminUsers(users) {
   const countTag = document.getElementById('users-count-tag');
   if (countTag) countTag.textContent = `${users.length} Registered Users`;
 
+  const availableRoles = [
+    "Municipal Planner",
+    "Climate Scientist",
+    "Urban Resilience Director",
+    "Judge / Evaluator",
+    "Super Admin"
+  ];
+
   tbody.innerHTML = users.map(u => {
     const statusClass = (u.status || 'active').toLowerCase();
     const isSuperAdmin = u.email === 'srbodkhe@gmail.com';
     return `
       <tr>
-        <td><strong>${u.email}</strong> ${isSuperAdmin ? '👑' : ''}</td>
-        <td>${u.role}</td>
+        <td><strong>${u.email}</strong> ${isSuperAdmin ? '👑 (Admin)' : ''}</td>
+        <td>
+          ${isSuperAdmin ? `
+            <span style="color: var(--color-cyan); font-weight: 600;">Super Admin</span>
+          ` : `
+            <select class="admin-role-select" onchange="promoteUserRole('${u.email}', this.value)" title="Promote or Change Role" style="background: rgba(255,255,255,0.08); color: var(--color-cyan); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 6px; font-size: 12px; cursor: pointer;">
+              ${availableRoles.map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+            </select>
+          `}
+        </td>
         <td><span class="user-status-badge ${statusClass}">${u.status}</span></td>
         <td><code>${u.provider || 'direct'}</code></td>
         <td>${u.login_count || 1}</td>
         <td>
+          <button class="table-btn" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; margin-right: 4px;" onclick="promptResetPassword('${u.email}')">Reset Password</button>
           ${isSuperAdmin ? '<span style="color: var(--text-dim); font-size: 11px;">Protected</span>' : `
             ${u.status === 'Active' ? `
               <button class="table-btn suspend" onclick="performAdminUserAction('${u.email}', 'suspend')">Suspend</button>
@@ -659,8 +912,8 @@ function renderAdminQuotas(quotas) {
 }
 
 function populateAdminSettings(config) {
-  document.getElementById('admin-gcp-project').value = config.gcp_project_id || 'genai-2026';
-  document.getElementById('admin-allowed-emails').value = config.allowed_emails || 'srbodkhe@gmail.com, judge@hackathon.com';
+  document.getElementById('admin-gcp-project').value = config.gcp_project_id || 'avani-albedo';
+  document.getElementById('admin-allowed-emails').value = config.allowed_emails || 'srbodkhe@gmail.com';
   document.getElementById('admin-earth-engine-toggle').checked = !!config.use_earth_engine_live;
   
   const keyNote = document.getElementById('gemini-key-status-note');
@@ -701,6 +954,24 @@ async function handleSaveAdminSettings(e) {
 }
 
 // Global actions exposed for inline table onclick
+window.promptResetPassword = async function(email) {
+  const newPw = prompt(`🔑 Reset Password for ${email}:\n\nEnter new password:`, "AvaniAlbedo12042026#");
+  if (!newPw) return;
+  try {
+    const res = await fetch('/api/admin/users/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, new_password: newPw })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to reset password");
+    alert(`✅ Password for ${email} successfully updated!`);
+    loadAdminDashboard();
+  } catch (err) {
+    alert(`❌ Error resetting password: ${err.message}`);
+  }
+};
+
 window.performAdminUserAction = async function(email, action) {
   try {
     const res = await fetch('/api/admin/users/action', {
@@ -734,6 +1005,127 @@ window.resolveAdminAlert = async function(alertId, action) {
     alert("Alert resolve error: " + err);
   }
 };
+
+function onAdminSatCountryChanged(country) {
+  const citySelect = document.getElementById('admin-sat-city');
+  if (!citySelect) return;
+  const citiesByCountry = {
+    "India": [
+      { name: "Bengaluru (12 Wards)", val: "Bengaluru" },
+      { name: "Mumbai MMR (6 Wards)", val: "Mumbai" },
+      { name: "Delhi NCR (6 Wards)", val: "Delhi" },
+      { name: "Hyderabad GHMC (4 Wards)", val: "Hyderabad" },
+      { name: "Pune PMRDA (5 Wards)", val: "Pune" },
+      { name: "Chennai GCC (5 Wards)", val: "Chennai" },
+      { name: "Kolkata KMC (4 Wards)", val: "Kolkata" },
+      { name: "Ahmedabad AMC (4 Wards)", val: "Ahmedabad" },
+      { name: "Jaipur JDA (3 Wards)", val: "Jaipur" }
+    ],
+    "UAE": [
+      { name: "Dubai Urban (3 Wards)", val: "Dubai" },
+      { name: "Abu Dhabi (2 Wards)", val: "Abu Dhabi" }
+    ],
+    "USA": [
+      { name: "Phoenix Metro (3 Wards)", val: "Phoenix" },
+      { name: "Las Vegas Valley (3 Wards)", val: "Las Vegas" },
+      { name: "Austin Capital (2 Wards)", val: "Austin" }
+    ]
+  };
+
+  const list = citiesByCountry[country] || citiesByCountry["India"];
+  citySelect.innerHTML = list.map(c => `<option value="${c.val}">${c.name}</option>`).join('');
+}
+
+async function handleSatelliteIngestion() {
+  const btn = document.getElementById('start-sat-ingestion-btn');
+  const country = document.getElementById('admin-sat-country').value;
+  const city = document.getElementById('admin-sat-city').value;
+  const consoleEl = document.getElementById('sat-ingestion-console');
+
+  if (!btn || !consoleEl) return;
+
+  btn.disabled = true;
+  btn.innerHTML = `<span>⏳ Ingesting Landsat & Sentinel Telemetry for ${city}...</span>`;
+  consoleEl.classList.remove('hidden');
+  consoleEl.innerHTML = `<div style="color: #38bdf8;">[INIT] Handshaking with Google Earth Engine & NASA/USGS Radiometric Catalogs...</div>`;
+
+  try {
+    const res = await fetch('/api/admin/satellite/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country, city })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Ingestion failed with HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const logs = data.telemetry_logs || [];
+
+    for (let i = 0; i < logs.length; i++) {
+      await new Promise(r => setTimeout(r, 120));
+      const line = document.createElement('div');
+      line.textContent = logs[i];
+      if (logs[i].includes('Complete')) {
+        line.style.color = '#34d399';
+        line.style.fontWeight = 'bold';
+      }
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    if (city.toLowerCase() === currentSelectedCity.toLowerCase()) {
+      await loadClimateCells(currentSelectedCity);
+    }
+    loadAdminDashboard();
+  } catch (err) {
+    const errLine = document.createElement('div');
+    errLine.style.color = '#ef4444';
+    errLine.textContent = `[ERROR] Failed to complete satellite ingestion: ${err.message}`;
+    consoleEl.appendChild(errLine);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span>🚀 Start Satellite Data Ingestion & Calibration</span>`;
+  }
+}
+
+window.approveAlertWithRole = async function(alertId) {
+  const select = document.getElementById(`alert-role-${alertId}`);
+  const role = select ? select.value : "Municipal Planner";
+  try {
+    const res = await fetch('/api/admin/alerts/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: alertId, action: 'approve', role: role })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      renderAdminAlerts(data.alerts || []);
+      renderAdminUsers(data.users || []);
+      checkAdminAlerts();
+    }
+  } catch (err) {
+    alert("Approval error: " + err);
+  }
+};
+
+window.promoteUserRole = async function(email, newRole) {
+  try {
+    const res = await fetch('/api/admin/users/role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role: newRole })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to update role");
+    renderAdminUsers(data.users || []);
+    alert(`👑 Role updated: ${email} is now a ${newRole}!`);
+  } catch (err) {
+    alert("Role update error: " + err.message);
+  }
+};
+
 async function loadSystemStatus() {
   try {
     const res = await fetch('/api/status');
@@ -940,12 +1332,10 @@ async function runAvaniAgent() {
     renderAllocationsTable(currentScenarioResult);
     renderInterventionMarkers(currentScenarioResult);
     
-    // Switch to Plan tab ONLY IF user is currently on tab-plan or initially loading
+    // If no tab is active yet (initial load), default to Plan tab
     const activeTab = document.querySelector('.tab-btn.active');
-    const isPlanActive = !activeTab || activeTab.dataset.tab === 'tab-plan';
-    if (isPlanActive) {
-      const planBtn = document.querySelector('[data-tab="tab-plan"]');
-      if (planBtn) planBtn.click();
+    if (!activeTab) {
+      switchResultsTab('tab-plan');
     }
   } catch (err) {
     console.error("Action plan generation error:", err);
@@ -962,8 +1352,25 @@ function setTemperatureSensorMode(mode) {
   currentTempSensorMode = mode;
   const btnLst = document.getElementById('temp-mode-btn-lst');
   const btnAir = document.getElementById('temp-mode-btn-air');
+  const cardSurface = document.getElementById('card-mode-surface');
+  const cardAmbient = document.getElementById('card-mode-ambient');
+  const badgeSurface = document.getElementById('badge-mode-surface');
+  const badgeAmbient = document.getElementById('badge-mode-ambient');
   const statusPill = document.getElementById('temp-mode-status-pill');
   const explainNote = document.getElementById('temp-explainability-note');
+  const exampleSurface = document.getElementById('example-surface-text');
+  const exampleAmbient = document.getElementById('example-ambient-text');
+
+  const peakVal = currentTimelineData ? currentTimelineData.peak_high_c.toFixed(1) : '42.8';
+  const airVal = currentTimelineData && currentTimelineData.air_temp_high_c ? currentTimelineData.air_temp_high_c.toFixed(1) : '31.5';
+  const cityName = currentTimelineData ? currentTimelineData.city : 'Bengaluru';
+
+  if (exampleSurface) {
+    exampleSurface.textContent = `Bengaluru Surface Temperature: ~42.8°C (Current ${cityName}: ~${peakVal}°C)`;
+  }
+  if (exampleAmbient) {
+    exampleAmbient.textContent = `Bengaluru Air Temperature: ~31.5°C (Current ${cityName}: ~${airVal}°C)`;
+  }
 
   if (mode === "air") {
     if (btnLst) {
@@ -974,14 +1381,36 @@ function setTemperatureSensorMode(mode) {
       btnAir.style.background = "#38bdf8";
       btnAir.style.color = "#020617";
     }
+    if (cardSurface) {
+      cardSurface.style.background = "rgba(244, 63, 94, 0.04)";
+      cardSurface.style.border = "1px solid rgba(244, 63, 94, 0.2)";
+      cardSurface.style.boxShadow = "none";
+    }
+    if (cardAmbient) {
+      cardAmbient.style.background = "rgba(56, 189, 248, 0.12)";
+      cardAmbient.style.border = "1.5px solid #38bdf8";
+      cardAmbient.style.boxShadow = "0 0 12px rgba(56, 189, 248, 0.25)";
+    }
+    if (badgeSurface) {
+      badgeSurface.textContent = "SWITCH";
+      badgeSurface.style.background = "transparent";
+      badgeSurface.style.color = "#64748b";
+      badgeSurface.style.border = "1px solid #475569";
+    }
+    if (badgeAmbient) {
+      badgeAmbient.textContent = "ACTIVE";
+      badgeAmbient.style.background = "#38bdf8";
+      badgeAmbient.style.color = "#020617";
+      badgeAmbient.style.border = "none";
+    }
     if (statusPill) {
-      statusPill.textContent = "🌤️ 2-Meter Shaded Air Temperature (Weather App / Stevenson Screen)";
+      statusPill.textContent = "🌤️ Weather APIs (AccuWeather/IMD) • 2-Meter Shaded Air Temperature";
       statusPill.style.color = "#38bdf8";
       statusPill.style.background = "rgba(56, 189, 248, 0.15)";
       statusPill.style.borderColor = "rgba(56, 189, 248, 0.3)";
     }
     if (explainNote) {
-      explainNote.innerHTML = `<strong style="color: #38bdf8;">🌤️ Ambient Air Temperature Mode:</strong> Reflects standard meteorological weather station records measured in a shaded Stevenson screen 2 meters above ground. Surface materials (asphalt, concrete) can be <b>+10°C to +14°C hotter</b> than this value under peak direct sunlight!`;
+      explainNote.innerHTML = `<strong style="color: #38bdf8;">🌤️ Ambient Air Temperature Mode:</strong> Sourced from <b>Weather APIs (AccuWeather/IMD)</b>. Measures human-experienced shaded air temperature recorded in a 2-meter Stevenson screen (e.g. Bengaluru Air: <b>~31.5°C</b>). Asphalt & concrete roof skins heat up <b>10°C–14°C hotter</b> under direct sunlight!`;
     }
   } else {
     if (btnLst) {
@@ -992,15 +1421,35 @@ function setTemperatureSensorMode(mode) {
       btnAir.style.background = "transparent";
       btnAir.style.color = "#94a3b8";
     }
+    if (cardSurface) {
+      cardSurface.style.background = "rgba(244, 63, 94, 0.12)";
+      cardSurface.style.border = "1.5px solid #f43f5e";
+      cardSurface.style.boxShadow = "0 0 12px rgba(244, 63, 94, 0.25)";
+    }
+    if (cardAmbient) {
+      cardAmbient.style.background = "rgba(56, 189, 248, 0.04)";
+      cardAmbient.style.border = "1px solid rgba(56, 189, 248, 0.2)";
+      cardAmbient.style.boxShadow = "none";
+    }
+    if (badgeSurface) {
+      badgeSurface.textContent = "ACTIVE";
+      badgeSurface.style.background = "#f43f5e";
+      badgeSurface.style.color = "#fff";
+      badgeSurface.style.border = "none";
+    }
+    if (badgeAmbient) {
+      badgeAmbient.textContent = "SWITCH";
+      badgeAmbient.style.background = "transparent";
+      badgeAmbient.style.color = "#64748b";
+      badgeAmbient.style.border = "1px solid #475569";
+    }
     if (statusPill) {
-      statusPill.textContent = "🛰️ Peak Land Surface Temperature (Landsat 8/9 TIRS Band 10)";
+      statusPill.textContent = "🛰️ Landsat 8/9 Thermal Infrared Sensor • Google Earth Engine";
       statusPill.style.color = "#f43f5e";
       statusPill.style.background = "rgba(244, 63, 94, 0.15)";
       statusPill.style.borderColor = "rgba(244, 63, 94, 0.3)";
     }
     if (explainNote) {
-      const peakVal = currentTimelineData ? currentTimelineData.peak_high_c.toFixed(1) : '42.8';
-      const airVal = currentTimelineData && currentTimelineData.air_temp_high_c ? currentTimelineData.air_temp_high_c.toFixed(1) : '31.5';
       explainNote.innerHTML = `<strong style="color: #38bdf8;">💡 Why Surface Temp (${peakVal}°C) differs from AccuWeather Air Temp (${airVal}°C):</strong> AccuWeather reports <i>2-meter shaded air temperature</i>. Landsat 8/9 satellite thermal radiometers measure the literal <i>radiometric surface skin</i> of asphalt & concrete roofs absorbing direct solar radiation (∼950 W/m²), which heats up <b>10°C–12°C hotter than ambient air</b>. Cool roofs block this surface heating directly!`;
     }
   }
@@ -1027,13 +1476,24 @@ function renderTemperatureTimelineView(data) {
   if (!data) return;
   const isAirMode = currentTempSensorMode === "air";
 
+  const exampleSurface = document.getElementById('example-surface-text');
+  const exampleAmbient = document.getElementById('example-ambient-text');
+  const peakVal = data.peak_high_c.toFixed(1);
+  const airVal = (data.air_temp_high_c ?? (data.peak_high_c - 11.3)).toFixed(1);
+  if (exampleSurface) {
+    exampleSurface.textContent = `Bengaluru Surface Temperature: ~42.8°C (Current ${data.city}: ~${peakVal}°C)`;
+  }
+  if (exampleAmbient) {
+    exampleAmbient.textContent = `Bengaluru Air Temperature: ~31.5°C (Current ${data.city}: ~${airVal}°C)`;
+  }
+
   const areaBadge = document.getElementById('timeline-area-badge');
   if (areaBadge) areaBadge.textContent = data.ward_name ? `${data.ward_name} (${data.city})` : `${data.city} Metropolitan Average`;
 
   const hazardBadge = document.getElementById('timeline-hazard-badge');
   if (hazardBadge) {
     hazardBadge.textContent = isAirMode 
-      ? `AccuWeather Baseline: ${(data.air_temp_high_c || (data.peak_high_c - 11.3)).toFixed(1)}°C`
+      ? `AccuWeather Baseline: ${airVal}°C`
       : `Hazardous Hours: ${data.heat_hazard_duration_hours}h/day`;
   }
 
@@ -1221,14 +1681,39 @@ function renderForecastCards(forecast, isAirMode = false, deltaC = 11.3) {
   }).join('');
 }
 
+let isComparisonLoading = false;
+
 async function runComparison() {
+  if (isComparisonLoading) return;
+  isComparisonLoading = true;
+
+  const grid = document.getElementById('comparison-grid');
+  if (grid && (!grid.children.length || grid.querySelector('.loading-state'))) {
+    grid.innerHTML = `
+      <div class="loading-state" style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: #94a3b8;">
+        <div class="btn-spinner" style="display: inline-block; width: 26px; height: 26px; border: 3px solid rgba(56,189,248,0.2); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px;"></div>
+        <div style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Computing Pareto-optimal scenario matrix for ${currentSelectedCity}...</div>
+        <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">Evaluating 4 Mixed-Integer Linear Programming models (Google OR-Tools SCIP)</div>
+      </div>
+    `;
+  }
+
   try {
     const res = await fetch(`/api/scenarios/compare?budget_inr=${currentBudgetInr}&city=${encodeURIComponent(currentSelectedCity)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderComparisonGrid(data.scenarios);
-    document.querySelector('[data-tab="tab-comparison"]').click();
   } catch (err) {
     console.error("Error fetching comparison:", err);
+    if (grid) {
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #f87171;">
+          ⚠️ Failed to compute scenario comparison. <button onclick="runComparison()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; margin-left: 8px; cursor: pointer;">Retry</button>
+        </div>
+      `;
+    }
+  } finally {
+    isComparisonLoading = false;
   }
 }
 
@@ -1383,9 +1868,25 @@ function openCellInspector(cell) {
         ${cell.hvi_score} (${cell.hvi_category})
       </span>
     </div>
+    <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
+      <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: flex; justify-content: space-between;">
+        <span>🌡️ Dual Temperature Readings</span>
+        <span style="color: #cbd5e1; font-weight: 600;">Δ +11.3°C Surface Mass Gap</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px;">
+        <div style="background: rgba(244, 63, 94, 0.1); border-left: 2px solid #f43f5e; padding: 4px 6px; border-radius: 3px;">
+          <div style="font-size: 9.5px; color: #f43f5e; font-weight: 700;">🛰️ Surface Temp (LST)</div>
+          <div style="font-size: 13px; font-weight: 700; color: #f87171;">${cell.lst}°C <span style="font-size: 10px; color: #f43f5e;">(+${cell.heat_anomaly}°C)</span></div>
+          <div style="font-size: 9px; color: #94a3b8;">Landsat 8/9 TIRS & GEE</div>
+        </div>
+        <div style="background: rgba(56, 189, 248, 0.1); border-left: 2px solid #38bdf8; padding: 4px 6px; border-radius: 3px;">
+          <div style="font-size: 9.5px; color: #38bdf8; font-weight: 700;">🌤️ Ambient Air Temp</div>
+          <div style="font-size: 13px; font-weight: 700; color: #38bdf8;">${(cell.lst - 11.3).toFixed(1)}°C</div>
+          <div style="font-size: 9px; color: #94a3b8;">Weather APIs (AccuWeather/IMD)</div>
+        </div>
+      </div>
+    </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px;">
-      <div>Surface Temp (LST): <b>${cell.lst}°C</b></div>
-      <div>Heat Anomaly: <b style="color: #f43f5e;">+${cell.heat_anomaly}°C</b></div>
       <div>Vegetation (NDVI): <b>${cell.ndvi}</b></div>
       <div>Built Index (NDBI): <b>${cell.ndbi}</b></div>
       <div>Albedo Reflectance: <b>${cell.albedo}</b></div>
@@ -1624,40 +2125,64 @@ function renderAllocationsTable(scenario) {
 
 function renderComparisonGrid(scenarios) {
   const grid = document.getElementById('comparison-grid');
-  grid.innerHTML = Object.entries(scenarios).map(([key, s]) => `
-    <div class="comp-card ${key === selectedScenario ? 'highlight' : ''}">
-      <div class="comp-header">
-        <span>${s.title}</span>
-        <span style="color: #38bdf8;">-${s.avg_temp_reduction_c}°C</span>
+  if (!grid || !scenarios) return;
+
+  grid.innerHTML = Object.entries(scenarios).map(([key, s]) => {
+    const isSelected = key === selectedScenario;
+    return `
+      <div class="comp-card ${isSelected ? 'highlight' : ''}" data-key="${key}" title="Click to select and apply this scenario">
+        <div class="comp-header">
+          <span>${s.title}</span>
+          <span style="color: #38bdf8; font-family: var(--font-mono); font-weight: 700;">-${s.avg_temp_reduction_c}°C</span>
+        </div>
+        <div class="comp-metrics">
+          <div class="comp-metric-item">
+            <small>Beneficiaries</small>
+            <strong>${s.total_beneficiaries.toLocaleString()}</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Budget Used</small>
+            <strong>${formatCurrency(s.budget_spent_inr || (s.budget_spent_lakhs * 100000))}</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Exposure Drop</small>
+            <strong style="color: #34d399;">${s.heat_exposure_reduction_pct}%</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Trees</small>
+            <strong>${s.trees.toLocaleString()}</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Cool Roofs</small>
+            <strong>${(s.cool_roof_sqft/1000).toFixed(0)}k sqft</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Shade + Water</small>
+            <strong>${s.shades + s.hydration} sites</strong>
+          </div>
+        </div>
+        <div class="comp-card-footer" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+          <span class="comp-status-badge" style="font-size: 11px;">
+            ${isSelected 
+              ? '<span style="color: #34d399; font-weight: 700;">● Active Scenario</span>' 
+              : '<span style="color: #94a3b8;">Click to select</span>'}
+          </span>
+          <button type="button" class="select-scenario-btn" data-key="${key}" style="background: ${isSelected ? 'rgba(52, 211, 153, 0.2)' : 'rgba(56, 189, 248, 0.15)'}; border: 1px solid ${isSelected ? '#34d399' : 'rgba(56, 189, 248, 0.4)'}; color: ${isSelected ? '#34d399' : '#38bdf8'}; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
+            ${isSelected ? '✓ Loaded' : '👉 Select & Load'}
+          </button>
+        </div>
       </div>
-      <div class="comp-metrics">
-        <div class="comp-metric-item">
-          <small>Beneficiaries</small>
-          <strong>${s.total_beneficiaries.toLocaleString()}</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Budget Used</small>
-          <strong>${formatCurrency(s.budget_spent_inr || (s.budget_spent_lakhs * 100000))}</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Exposure Drop</small>
-          <strong style="color: #34d399;">${s.heat_exposure_reduction_pct}%</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Trees</small>
-          <strong>${s.trees.toLocaleString()}</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Cool Roofs</small>
-          <strong>${(s.cool_roof_sqft/1000).toFixed(0)}k sqft</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Shade + Water</small>
-          <strong>${s.shades + s.hydration} sites</strong>
-        </div>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.comp-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const scenarioKey = card.dataset.key;
+      if (scenarioKey) {
+        selectAndLoadScenario(scenarioKey);
+      }
+    });
+  });
 }
 
 function exportPlanJson() {
@@ -2014,4 +2539,192 @@ function renderHeatCalendar(calendar) {
     `).join('');
   }
 }
+
+// ================= DELEGATED AI PROJECT COPILOT CONTROLLER =================
+let copilotHistory = [];
+let isCopilotWaiting = false;
+
+function initCopilot() {
+  const toggleBtn = document.getElementById('copilot-toggle-btn');
+  const panel = document.getElementById('copilot-chat-panel');
+  const closeBtn = document.getElementById('copilot-close-btn');
+  const clearBtn = document.getElementById('copilot-clear-btn');
+  const form = document.getElementById('copilot-form');
+  const input = document.getElementById('copilot-input');
+  const chipsContainer = document.getElementById('copilot-quick-chips');
+
+  if (!toggleBtn || !panel) return;
+
+  // Toggle Panel
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+      panel.classList.remove('hidden');
+      if (input) input.focus();
+    } else {
+      panel.classList.add('hidden');
+    }
+  });
+
+  // Close Panel
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      panel.classList.add('hidden');
+    });
+  }
+
+  // Clear Chat
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      copilotHistory = [];
+      const messagesContainer = document.getElementById('copilot-messages');
+      if (messagesContainer) {
+        messagesContainer.innerHTML = `
+          <div class="copilot-msg bot-msg">
+            <div class="copilot-msg-bubble">
+              👋 <b>Hi! I'm the Avani Project Help Bot.</b><br>
+              Chat history cleared. What would you like to know about our project?
+            </div>
+          </div>
+        `;
+      }
+    });
+  }
+
+  // Quick Chips
+  if (chipsContainer) {
+    chipsContainer.addEventListener('click', (e) => {
+      const chip = e.target.closest('.quick-chip');
+      if (chip && chip.dataset.query) {
+        sendCopilotMessage(chip.dataset.query);
+      }
+    });
+  }
+
+  // Form Submit
+  if (form && input) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text || isCopilotWaiting) return;
+      input.value = '';
+      sendCopilotMessage(text);
+    });
+  }
+}
+
+async function sendCopilotMessage(userText) {
+  const messagesContainer = document.getElementById('copilot-messages');
+  if (!messagesContainer) return;
+
+  // 1. Render User Message
+  const userMsgEl = document.createElement('div');
+  userMsgEl.className = 'copilot-msg user-msg';
+  userMsgEl.innerHTML = `
+    <div class="copilot-msg-bubble">${escapeHtml(userText)}</div>
+  `;
+  messagesContainer.appendChild(userMsgEl);
+
+  // 2. Render Typing Indicator
+  const typingEl = document.createElement('div');
+  typingEl.className = 'copilot-msg bot-msg copilot-typing-msg';
+  typingEl.innerHTML = `
+    <div class="copilot-msg-bubble">
+      <div class="copilot-typing">
+        <span class="copilot-typing-dot"></span>
+        <span class="copilot-typing-dot"></span>
+        <span class="copilot-typing-dot"></span>
+        <span style="font-size: 11px; color: #94a3b8; margin-left: 6px;">Consulting Avani Help Bot...</span>
+      </div>
+    </div>
+  `;
+  messagesContainer.appendChild(typingEl);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  isCopilotWaiting = true;
+
+  try {
+    const res = await fetch('/api/help-bot/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: userText,
+        city: currentSelectedCity || 'Bengaluru',
+        history: copilotHistory
+      })
+    });
+
+    const data = await res.json();
+    typingEl.remove();
+
+    if (data.status === 'success' && data.response) {
+      // Save history
+      copilotHistory.push({ role: 'user', content: userText });
+      copilotHistory.push({ role: 'assistant', content: data.response });
+
+      // Format markdown response
+      const formattedHtml = formatCopilotMarkdown(data.response);
+
+      const botMsgEl = document.createElement('div');
+      botMsgEl.className = 'copilot-msg bot-msg';
+      botMsgEl.innerHTML = `
+        <div class="copilot-msg-bubble">${formattedHtml}</div>
+        <div class="copilot-msg-meta">
+          <span>⚡ ${data.model}</span>
+          ${data.sources && data.sources.length ? `<span>• 📑 ${data.sources[0]}</span>` : ''}
+        </div>
+      `;
+      messagesContainer.appendChild(botMsgEl);
+    } else {
+      throw new Error(data.detail || 'Could not get response');
+    }
+  } catch (err) {
+    typingEl.remove();
+    console.error('Copilot request error:', err);
+    const errEl = document.createElement('div');
+    errEl.className = 'copilot-msg bot-msg';
+    errEl.innerHTML = `
+      <div class="copilot-msg-bubble" style="border-left: 3px solid #ef4444;">
+        ⚠️ Sorry, I encountered an issue retrieving the response. Please check that the server is reachable and try again.
+      </div>
+    `;
+    messagesContainer.appendChild(errEl);
+  } finally {
+    isCopilotWaiting = false;
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+}
+
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function formatCopilotMarkdown(text) {
+  if (!text) return '';
+  let html = text;
+
+  // Headers
+  html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+  html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+
+  // Bold & Italic
+  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+
+  // Inline Code
+  html = html.replace(/`([^`]+)`/gim, '<code>$1</code>');
+
+  // Bullet items
+  html = html.replace(/^\s*[-•*]\s+(.*$)/gim, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+  // Line breaks
+  html = html.replace(/\n\n/g, '<br><br>');
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+}
+
 

@@ -16,8 +16,12 @@
   <!-- Chart.js for High-Precision Diurnal & Heatwave Timeline Charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="/static/css/style.css">
+  <!-- Custom Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+
+  <!-- Custom CSS with cache busting -->
+  <link rel="stylesheet" href="/static/css/style.css?v=20261015-3">
 </head>
 <body class="dark-theme">
   <!-- Top Navigation Header -->
@@ -43,22 +47,24 @@
       </div>
       <div class="user-pill hidden" id="auth-user-pill">
         <span class="user-icon">👤</span>
-        <span id="auth-user-email">judge@hackathon.com</span>
+        <span id="auth-user-email">judges</span>
         <button id="logout-btn" class="logout-btn" title="Sign out">✕</button>
       </div>
-      <button class="secondary-btn" id="data-sources-btn" title="View Scientific Satellite Data Lineage & Calibration" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(52, 211, 153, 0.5); color: #34d399;">
-        🔬 Satellite Data & Lineage
-      </button>
-      <button class="secondary-btn" id="gcp-stack-btn" title="View Google Cloud Technologies & Sustainability Alignment" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(168, 85, 247, 0.5); color: #c084fc;">
-        ☁️ GCP Stack & Impact
-      </button>
-      <button class="secondary-btn" id="infra-modal-btn" title="View Paid GCP Architecture & Hosting Steps" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(6, 182, 212, 0.5); color: #38bdf8;">
-        🚀 Hosting Guide
-      </button>
-      <button class="admin-portal-btn" id="open-admin-btn" title="Admin Control Center">
-        <span>⚙️ Admin</span>
-        <span class="admin-alert-badge hidden" id="admin-alert-badge">0</span>
-      </button>
+      <div class="dashboard-nav-actions hidden" id="dashboard-nav-actions" style="display: flex; gap: 8px; align-items: center;">
+        <button class="secondary-btn" id="data-sources-btn" title="View Scientific Satellite Data Lineage & Calibration" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(52, 211, 153, 0.5); color: #34d399;">
+          🔬 Satellite Data & Lineage
+        </button>
+        <button class="secondary-btn" id="gcp-stack-btn" title="View Google Cloud Technologies & Sustainability Alignment" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(168, 85, 247, 0.5); color: #c084fc;">
+          ☁️ GCP Stack & Impact
+        </button>
+        <button class="secondary-btn" id="infra-modal-btn" title="View Paid GCP Architecture & Hosting Steps" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(6, 182, 212, 0.5); color: #38bdf8;">
+          🚀 Hosting Guide
+        </button>
+        <button class="admin-portal-btn" id="open-admin-btn" title="Admin Control Center">
+          <span>⚙️ Admin</span>
+          <span class="admin-alert-badge hidden" id="admin-alert-badge">0</span>
+        </button>
+      </div>
       <a href="https://github.com/shivajibodkhe/Avani_Albedo" target="_blank" rel="noreferrer" class="github-link" title="View Source on GitHub">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
@@ -68,8 +74,112 @@
     </div>
   </header>
 
-  <!-- Main Grid Layout -->
-  <main class="app-layout">
+  <!-- DEDICATED SECURE LANDING GATEWAY (Visible to unauthenticated visitors) -->
+  <section class="landing-gateway-page" id="landing-gateway-page">
+    <div class="landing-container">
+      
+      <!-- Landing Hero -->
+      <div class="landing-hero">
+        <div class="landing-badge">
+          <span class="pulse-dot"></span>
+          <span>Mission-Critical Climate Intelligence • Secured Enterprise Architecture</span>
+        </div>
+        <h1 class="landing-title">AVANI ALBEDO</h1>
+        <p class="landing-subtitle">
+          Urban Heat Action Agent & Prescriptive Climate Resilience Engine. High-precision satellite radiometric thermal analytics (Landsat 8/9 & Sentinel-2), spatial microclimate optimization, and automated intervention matrices.
+        </p>
+      </div>
+
+      <!-- Sign In to Access Engine Terminal Card -->
+      <div class="landing-auth-card">
+        <div class="landing-card-header">
+          <div class="landing-card-icon">🔐</div>
+          <div class="landing-card-header-text">
+            <h3>Authorized Evaluator & Admin Portal</h3>
+            <p>Enter your credentials to unlock the Decision Engine dashboard</p>
+          </div>
+        </div>
+
+        <form id="login-form" class="login-form">
+          <div class="landing-form-group">
+            <label for="login-email">Username or Authorized Admin Email</label>
+            <input type="text" id="login-email" class="form-control" placeholder="judges or admin email" required autocomplete="username">
+          </div>
+
+          <div class="landing-form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+
+          <div class="login-error-msg hidden" id="login-error-msg">
+            Access Denied: Invalid credentials or account is not authorized.
+          </div>
+
+          <button type="submit" class="landing-submit-btn" id="login-submit-btn">
+            <span>🚀 Authenticate & Launch Engine</span>
+          </button>
+        </form>
+
+        <div class="login-divider"><span>OR GOOGLE SIGN-IN</span></div>
+
+        <button type="button" class="firebase-google-btn" id="firebase-google-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+          <span>Sign In / Request Access with Google</span>
+        </button>
+      </div>
+
+      <!-- Feature Showcase Grid -->
+      <div class="landing-features-grid">
+        <div class="landing-feature-card">
+          <div class="feature-card-icon">🛰️</div>
+          <div class="feature-card-title">Dual-Mode Satellite Thermography</div>
+          <p class="feature-card-desc">
+            Direct ingestion of Landsat 8/9 Thermal Infrared Sensor (TIRS) Land Surface Temperature and IMD weather ambient air telemetry across urban wards.
+          </p>
+        </div>
+
+        <div class="landing-feature-card">
+          <div class="feature-card-icon">⚡</div>
+          <div class="feature-card-title">OR-Tools SCIP Optimization</div>
+          <p class="feature-card-desc">
+            Constrained mathematical solver generating Pareto-optimal intervention portfolios across High-Albedo Cool Roofs, Urban Canopy, and Shading.
+          </p>
+        </div>
+
+        <div class="landing-feature-card">
+          <div class="feature-card-icon">🤖</div>
+          <div class="feature-card-title">Gemini 2.5 Flash Prescriptive Co-Pilot</div>
+          <p class="feature-card-desc">
+            AI-driven multi-agent municipal resilience reports, cost-benefit trade-offs, and ward-level actionable engineering playbooks.
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Infrastructure Telemetry Bar -->
+      <div class="landing-telemetry-bar">
+        <div class="telemetry-item">
+          <span>☁️ GCP Region:</span>
+          <strong>asia-south1 (Mumbai)</strong>
+        </div>
+        <div class="telemetry-item">
+          <span>🛡️ Cost Guardrail:</span>
+          <strong>Scale-to-Zero (&lt; ₹1,000/mo)</strong>
+        </div>
+        <div class="telemetry-item">
+          <span>🗄️ Database:</span>
+          <strong>Firestore Native</strong>
+        </div>
+        <div class="telemetry-item">
+          <span>📊 Analytics:</span>
+          <strong>BigQuery Geospatial</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Main Grid Layout (Hidden until authenticated) -->
+  <main class="app-layout hidden" id="dashboard-app-layout">
     
     <!-- Left Sidebar: Controls & Scenario Setup -->
     <aside class="sidebar-panel">
@@ -472,28 +582,61 @@
           <h2 class="plan-title" style="margin-top: 4px; font-size: 17px;">📈 Land Surface Temperature Timeline & Forecast</h2>
         </div>
 
-        <!-- Temperature Sensor Mode Toggle & Explainability Bar -->
-        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase;">Sensor Mode:</span>
-              <div class="temp-mode-toggle" style="display: flex; background: rgba(2, 6, 23, 0.7); border-radius: 6px; padding: 2px; border: 1px solid rgba(255,255,255,0.1);">
-                <button id="temp-mode-btn-lst" class="temp-mode-btn active" style="background: var(--color-orange); color: #020617; border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                  🛰️ Surface Skin LST (Peak Heat)
+        <!-- Dual Temperature Mode Selector & Comprehensive Specifications -->
+        <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 11px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Active Mode:</span>
+              <div class="temp-mode-toggle" style="display: flex; background: rgba(2, 6, 23, 0.85); border-radius: 6px; padding: 3px; border: 1px solid rgba(255,255,255,0.12); gap: 4px;">
+                <button id="temp-mode-btn-lst" class="temp-mode-btn active" style="background: var(--color-orange); color: #020617; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+                  🛰️ Surface Temperature Mode
                 </button>
-                <button id="temp-mode-btn-air" class="temp-mode-btn" style="background: transparent; color: #94a3b8; border: none; border-radius: 4px; padding: 3px 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
-                  🌤️ Ambient Air Temp (Weather App)
+                <button id="temp-mode-btn-air" class="temp-mode-btn" style="background: transparent; color: #94a3b8; border: none; border-radius: 4px; padding: 4px 10px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;">
+                  🌤️ Ambient Air Temperature Mode
                 </button>
               </div>
             </div>
-            <span id="temp-mode-status-pill" style="font-size: 10.5px; background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); padding: 2px 8px; border-radius: 4px; font-weight: 600;">
-              Peak Summer Heatwave Baseline (Landsat 8/9 TIRS Band 10)
+            <span id="temp-mode-status-pill" style="font-size: 10.5px; background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); padding: 3px 10px; border-radius: 4px; font-weight: 600;">
+              🛰️ Landsat 8/9 Thermal Infrared Sensor • Google Earth Engine
             </span>
           </div>
 
+          <!-- Side-by-Side Dual Temperature Mode Specifications Cards -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+            <!-- Surface Temperature Mode Card -->
+            <div id="card-mode-surface" onclick="setTemperatureSensorMode('lst')" style="background: rgba(244, 63, 94, 0.08); border: 1.5px solid #f43f5e; border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.2s ease;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong style="color: #fb7185; font-size: 12px; display: flex; align-items: center; gap: 4px;">
+                  <span>🛰️</span> Surface Temperature Mode
+                </strong>
+                <span id="badge-mode-surface" style="font-size: 9px; background: #f43f5e; color: #fff; padding: 1px 6px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">ACTIVE</span>
+              </div>
+              <div style="font-size: 11px; line-height: 1.45; color: #cbd5e1;">
+                <div><b style="color: #94a3b8;">Source:</b> Landsat 8/9 Thermal Infrared Sensor, Google Earth Engine</div>
+                <div><b style="color: #94a3b8;">Measures:</b> Land Surface Temperature (LST) — heat absorbed by roads, roofs, and concrete</div>
+                <div style="margin-top: 2px;"><b style="color: #94a3b8;">Typical Example:</b> <span id="example-surface-text" style="color: #fca5a5; font-weight: 600;">Bengaluru Surface Temperature: ~42.8°C</span></div>
+              </div>
+            </div>
+
+            <!-- Ambient Air Temperature Mode Card -->
+            <div id="card-mode-ambient" onclick="setTemperatureSensorMode('air')" style="background: rgba(56, 189, 248, 0.04); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 6px; padding: 10px; cursor: pointer; transition: all 0.2s ease;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <strong style="color: #38bdf8; font-size: 12px; display: flex; align-items: center; gap: 4px;">
+                  <span>🌤️</span> Ambient Air Temperature Mode
+                </strong>
+                <span id="badge-mode-ambient" style="font-size: 9px; background: transparent; color: #64748b; border: 1px solid #475569; padding: 1px 6px; border-radius: 3px; font-weight: 700; text-transform: uppercase;">SWITCH</span>
+              </div>
+              <div style="font-size: 11px; line-height: 1.45; color: #cbd5e1;">
+                <div><b style="color: #94a3b8;">Source:</b> Weather APIs (AccuWeather/IMD)</div>
+                <div><b style="color: #94a3b8;">Measures:</b> Human-experienced shaded air temperature (2m Stevenson screen)</div>
+                <div style="margin-top: 2px;"><b style="color: #94a3b8;">Typical Example:</b> <span id="example-ambient-text" style="color: #7dd3fc; font-weight: 600;">Bengaluru Air Temperature: ~31.5°C</span></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Explainability Note for AccuWeather vs Satellite difference -->
-          <div id="temp-explainability-note" style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 11px; color: #cbd5e1; line-height: 1.5;">
-            <strong style="color: #38bdf8;">💡 Why Surface Temp (42.8°C) differs from AccuWeather Air Temp (31°C):</strong>
+          <div id="temp-explainability-note" style="padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 11px; color: #cbd5e1; line-height: 1.5;">
+            <strong style="color: #38bdf8;">💡 Why Surface Temp (42.8°C) differs from AccuWeather Air Temp (31.5°C):</strong>
             AccuWeather reports <i>2-meter shaded air temperature</i>. Landsat 8/9 satellite thermal radiometers measure the literal <i>radiometric surface skin</i> of asphalt & concrete roofs absorbing direct solar radiation ($\sim 950\,\text{W/m}^2$), which heats up <b>10°C–12°C hotter than ambient air</b>. Cool roofs block this surface heating directly!
           </div>
         </div>
@@ -622,59 +765,7 @@
     </aside>
   </main>
 
-  <!-- Judge & Evaluator Auth Login Modal -->
-  <div class="modal-overlay hidden" id="login-modal-overlay">
-    <div class="login-modal-card">
-      <div class="login-modal-header">
-        <div class="login-badge-icon">🔐</div>
-        <h2>Access Restricted</h2>
-        <p class="login-subtitle">Avani Albedo Prescriptive Climate Decision Engine</p>
-      </div>
 
-      <div class="judge-access-notice">
-        <strong>⚖️ Hackathon Evaluation Access:</strong>
-        <p>Sign in with your Google account via Firebase, or use the 1-click evaluator demo button below. Unregistered users will trigger an instant alert to Admin.</p>
-      </div>
-
-      <!-- Firebase Google Sign-In Button -->
-      <button type="button" class="firebase-google-btn" id="firebase-google-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-        <span>Sign In with Google (Firebase Auth)</span>
-      </button>
-
-      <div class="login-divider"><span>OR ID & PASSWORD</span></div>
-
-      <form id="login-form" class="login-form">
-        <div class="form-group">
-          <label for="login-email">Authorized Gmail / Hackathon ID</label>
-          <input type="email" id="login-email" class="form-control" placeholder="judge@hackathon.com" required>
-        </div>
-
-        <div class="form-group">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
-        </div>
-
-        <div class="login-error-msg hidden" id="login-error-msg">
-          Access Denied: Invalid credentials or email is not on the authorized whitelist.
-        </div>
-
-        <button type="submit" class="primary-btn login-submit-btn" id="login-submit-btn">
-          Sign In to Decision Engine
-        </button>
-
-        <div class="login-divider"><span>OR DEMO EVALUATION</span></div>
-
-        <button type="button" class="quick-judge-btn" id="quick-judge-btn">
-          ⚡ 1-Click Quick Demo Login as Judge
-        </button>
-      </form>
-
-      <div class="login-whitelist-footer">
-        <span>Authorized Whitelist: <code>srbodkhe@gmail.com</code>, <code>judge@hackathon.com</code></span>
-      </div>
-    </div>
-  </div>
 
   <!-- Super Admin Control Center Modal -->
   <div class="modal-overlay hidden" id="admin-modal-overlay">
@@ -684,7 +775,7 @@
           <span class="admin-logo-badge">⚙️</span>
           <div>
             <h3>Avani Albedo Admin Control Center</h3>
-            <p>Super Admin: <code>srbodkhe@gmail.com</code> • Firebase, Cloud Run & Quota Management</p>
+            <p>Super Admin: <code>srbodkhe@gmail.com</code> • User Passwords & Approvals</p>
           </div>
         </div>
         <button class="close-admin-btn" id="close-admin-btn">✕</button>
@@ -700,6 +791,9 @@
         </button>
         <button class="admin-tab-btn" data-tab="admin-tab-quotas">
           📊 Quotas & Usage Tracking
+        </button>
+        <button class="admin-tab-btn" data-tab="admin-tab-satellite">
+          🛰️ Satellite Data Ingestion
         </button>
       </div>
 
@@ -754,15 +848,15 @@
               <strong>Google Cloud Project ID</strong>
               <small>Target GCP project for Cloud Run, Firestore, and BigQuery</small>
             </label>
-            <input type="text" id="admin-gcp-project" class="form-control" value="genai-2026">
+            <input type="text" id="admin-gcp-project" class="form-control" value="avani-albedo">
           </div>
 
           <div class="settings-group">
             <label for="admin-allowed-emails">
-              <strong>Authorized Gmail Whitelist (Comma-separated)</strong>
-              <small>Emails permitted to sign in through Firebase or Direct Login</small>
+              <strong>Authorized Admin Emails (Comma-separated)</strong>
+              <small>Emails permitted to sign in through Google Auth or Direct Login</small>
             </label>
-            <textarea id="admin-allowed-emails" class="form-control" rows="2">srbodkhe@gmail.com, judge@hackathon.com, evaluator@ai-builder.cup</textarea>
+            <textarea id="admin-allowed-emails" class="form-control" rows="2">srbodkhe@gmail.com</textarea>
           </div>
 
           <div class="settings-group">
@@ -780,6 +874,132 @@
           </div>
         </form>
       </div>
+
+      <!-- Admin Tab 3: API Quotas & Usage Tracking -->
+      <div class="admin-tab-pane" id="admin-tab-quotas">
+        <div class="admin-users-header">
+          <h4>Google Cloud & Vertex AI Runtime Quotas</h4>
+          <span class="users-count-tag" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4);">
+            ● All Systems Operational
+          </span>
+        </div>
+        <p style="font-size: 12px; color: var(--text-dim); margin: 0 0 16px 0;">
+          Real-time rate limiting and quota consumption monitoring for Google Vertex AI Gemini 2.5 Flash, OR-Tools SCIP mathematical solver, and Earth Engine spatial telemetry.
+        </p>
+
+        <div class="admin-quotas-grid" id="admin-quotas-container">
+          <!-- Populated via JS -->
+        </div>
+      </div>
+
+      <!-- Admin Tab 4: Satellite Data Ingestion Pipeline -->
+      <div class="admin-tab-pane" id="admin-tab-satellite">
+        <div class="admin-satellite-ingestion-card" style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <h4 style="color: #38bdf8; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                <span>🛰️</span> On-Demand Earth Observation Satellite Pipeline
+              </h4>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                Select a target country and metropolitan city to trigger real-time multi-spectral radiance retrieval, Planck LST inversion, and BigQuery spatial ingestion.
+              </p>
+            </div>
+            <span class="status-tag active" style="font-size: 11px;">Pipeline Ready</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+            <div class="settings-group" style="margin-bottom: 0;">
+              <label for="admin-sat-country" style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">🌍 Select Country</label>
+              <select id="admin-sat-country" class="form-control" style="font-size: 12px;">
+                <option value="India" selected>🇮🇳 India</option>
+                <option value="UAE">🇦🇪 United Arab Emirates</option>
+                <option value="USA">🇺🇸 United States</option>
+              </select>
+            </div>
+
+            <div class="settings-group" style="margin-bottom: 0;">
+              <label for="admin-sat-city" style="font-size: 12px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">🏙️ Metropolitan City</label>
+              <select id="admin-sat-city" class="form-control" style="font-size: 12px;">
+                <option value="Bengaluru" selected>Bengaluru (12 Wards)</option>
+                <option value="Mumbai">Mumbai MMR (6 Wards)</option>
+                <option value="Delhi">Delhi NCR (6 Wards)</option>
+                <option value="Hyderabad">Hyderabad GHMC (4 Wards)</option>
+                <option value="Pune">Pune PMRDA (5 Wards)</option>
+                <option value="Chennai">Chennai GCC (5 Wards)</option>
+                <option value="Kolkata">Kolkata KMC (4 Wards)</option>
+                <option value="Ahmedabad">Ahmedabad AMC (4 Wards)</option>
+                <option value="Jaipur">Jaipur JDA (3 Wards)</option>
+                <option value="Dubai">Dubai Urban (3 Wards)</option>
+                <option value="Abu Dhabi">Abu Dhabi (2 Wards)</option>
+                <option value="Phoenix">Phoenix Metro (3 Wards)</option>
+                <option value="Las Vegas">Las Vegas Valley (3 Wards)</option>
+                <option value="Austin">Austin Capital (2 Wards)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="background: rgba(2, 132, 199, 0.08); border: 1px solid rgba(56, 189, 248, 0.15); border-radius: 8px; padding: 12px 14px; font-size: 11px; color: var(--text-secondary); line-height: 1.6;">
+            <div style="font-weight: 600; color: #38bdf8; margin-bottom: 4px;">📡 Active Sensor Inversion Protocols:</div>
+            • <b>NASA/USGS Landsat 8 & 9 TIRS-2:</b> Band 10 TOA radiance inverted via Planck equation: <code>T_sensor = K2 / ln(K1/L + 1)</code><br>
+            • <b>ESA Copernicus Sentinel-2 MSI (10m):</b> Multi-spectral NDVI & NDBI canopy and built density extraction<br>
+            • <b>Liang (2001) Broadband Albedo:</b> Integrated shortwave surface reflectance computation<br>
+            • <b>Google BigQuery Sink:</b> Automated ingestion into <code>avani-albedo.avani_climate.urban_heat_cells</code>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" class="landing-submit-btn" id="start-sat-ingestion-btn" style="flex: 1; padding: 10px 18px; font-size: 13px;">
+              <span>🚀 Start Satellite Data Ingestion & Calibration</span>
+            </button>
+          </div>
+
+          <!-- Progress / Log Output Console -->
+          <div id="sat-ingestion-console" class="hidden" style="background: #090d16; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #10b981; max-height: 200px; overflow-y: auto; line-height: 1.6;">
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Google Account Sign-In / Access Request Modal -->
+  <div class="modal-overlay hidden" id="google-auth-modal">
+    <div class="admin-modal-card" style="max-width: 450px;">
+      <div class="admin-modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 14px;">
+        <div class="admin-header-title">
+          <div style="background: white; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+            <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+          </div>
+          <div>
+            <h3>Sign In with Google</h3>
+            <p style="font-size: 11px; color: var(--text-dim); margin-top: 2px;">Municipal & Researcher Access Gateway</p>
+          </div>
+        </div>
+        <button class="close-admin-btn" id="close-google-auth-btn">✕</button>
+      </div>
+
+      <div style="padding: 16px 0;">
+        <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px;">
+          Enter your Gmail address to sign in. First-time users will automatically submit an <strong>Access Request</strong> to Administrator (<code>srbodkhe@gmail.com</code>). Once approved, you can immediately access the dashboard with your assigned role.
+        </p>
+
+        <form id="google-auth-form" onsubmit="submitGoogleAuth(event)">
+          <div class="landing-form-group">
+            <label for="google-auth-email" style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-cyan);">Gmail Address</label>
+            <input type="email" id="google-auth-email" class="form-control" placeholder="your.name@gmail.com" required autocomplete="email" style="margin-top: 6px;">
+          </div>
+
+          <div id="google-auth-alert" class="hidden" style="margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 12px; line-height: 1.4;"></div>
+
+          <div style="display: flex; gap: 10px; margin-top: 18px;">
+            <button type="submit" class="landing-submit-btn" id="google-auth-submit-btn" style="flex: 1; padding: 10px 16px;">
+              <span>🚀 Continue with Google</span>
+            </button>
+            <button type="button" class="table-btn" id="google-auth-cancel-btn" style="padding: 10px 16px; background: rgba(255,255,255,0.06); color: var(--text-secondary);">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <!-- Paid GCP Infrastructure & Hosting Guide Modal -->
   <div class="modal-overlay hidden" id="infra-modal">
@@ -866,15 +1086,19 @@
             </li>
           </ol>
         </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Scientific Satellite Data Sources & Lineage -->
-  <div class="admin-modal-overlay hidden" id="data-sources-modal">
-    <div class="admin-modal" style="max-width: 860px;">
-      <div class="admin-header">
+  <div class="modal-overlay hidden" id="data-sources-modal">
+    <div class="admin-modal-card" style="max-width: 860px; max-height: 88vh; overflow-y: auto;">
+      <div class="admin-modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
         <div class="admin-header-title">
-          <h2 style="font-size: 18px; color: #34d399; display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0; font-size: 18px; color: #34d399; display: flex; align-items: center; gap: 8px;">
             <span>🔬</span> Scientific Satellite Data Lineage & Calibration Standards
-          </h2>
-          <p>Multi-sensor earth observation telemetry • Peer-reviewed radiative transfer formulas • Ground-truth AWS validation</p>
+          </h3>
+          <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Multi-sensor earth observation telemetry • Peer-reviewed radiative transfer formulas • Ground-truth AWS validation</p>
         </div>
         <button class="close-admin-btn" id="close-data-sources-btn">✕</button>
       </div>
@@ -944,14 +1168,14 @@
   </div>
 
   <!-- Modal: Google Cloud Stack & Sustainability Social Impact Matrix -->
-  <div class="admin-modal-overlay hidden" id="gcp-stack-modal">
-    <div class="admin-modal" style="max-width: 900px;">
-      <div class="admin-header">
+  <div class="modal-overlay hidden" id="gcp-stack-modal">
+    <div class="admin-modal-card" style="max-width: 900px; max-height: 88vh; overflow-y: auto;">
+      <div class="admin-modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
         <div class="admin-header-title">
-          <h2 style="font-size: 18px; color: #c084fc; display: flex; align-items: center; gap: 8px;">
+          <h3 style="margin: 0; font-size: 18px; color: #c084fc; display: flex; align-items: center; gap: 8px;">
             <span>☁️</span> Google Cloud Architecture & Sustainability Impact Matrix
-          </h2>
-          <p>Hackathon Theme: Sustainability & Social Impact • Comprehensive 8-Service Google Cloud Coverage</p>
+          </h3>
+          <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-muted);">Hackathon Theme: Sustainability & Social Impact • Comprehensive 8-Service Google Cloud Coverage</p>
         </div>
         <button class="close-admin-btn" id="close-gcp-stack-btn">✕</button>
       </div>
@@ -1062,10 +1286,76 @@
     </div>
   </div>
 
+  <!-- Delegated AI Project Assistant / Copilot Floating Widget -->
+  <div class="copilot-widget-container" id="copilot-widget-container">
+    <!-- Floating Launcher Trigger Button (Right Side Bottom) -->
+    <button type="button" class="copilot-floating-btn" id="copilot-toggle-btn" title="Open Avani Project Help Bot">
+      <span class="copilot-btn-icon">🤖</span>
+      <span class="copilot-btn-label">Avani Help Bot</span>
+      <span class="copilot-sparkle-badge">✨ Project AI</span>
+    </button>
+
+    <!-- Slide-Up / Floating Chat Window Panel -->
+    <div class="copilot-chat-panel hidden" id="copilot-chat-panel">
+      <!-- Panel Header -->
+      <div class="copilot-chat-header">
+        <div class="copilot-header-info">
+          <div class="copilot-avatar">🤖</div>
+          <div>
+            <div class="copilot-title">
+              <strong>Avani Project Help Bot</strong>
+              <span class="badge ai-badge" style="font-size: 10px; padding: 1px 6px;">Knowledge Base</span>
+            </div>
+            <p class="copilot-subtitle">Answers queries from our app only • Strictly secured</p>
+          </div>
+        </div>
+        <div class="copilot-header-actions">
+          <button type="button" class="copilot-icon-btn" id="copilot-clear-btn" title="Clear Chat History">🗑️</button>
+          <button type="button" class="copilot-icon-btn" id="copilot-close-btn" title="Close Help Bot">✕</button>
+        </div>
+      </div>
+
+      <!-- Quick Question Chips -->
+      <div class="copilot-quick-chips" id="copilot-quick-chips">
+        <button type="button" class="quick-chip" data-query="How do we measure live satellite temperature, trees, and land surface?">🛰️ Satellite Data & Physics Pipeline</button>
+        <button type="button" class="quick-chip" data-query="Explain Surface Temperature Mode vs Ambient Air Temperature Mode">🌡️ Surface vs Ambient Temp Modes</button>
+        <button type="button" class="quick-chip" data-query="How are Trees Cut Down calculated?">🪓 How are Trees Cut Down calculated?</button>
+        <button type="button" class="quick-chip" data-query="Explain the 4 climate interventions and costs">🛠️ 4 Interventions & Costs</button>
+        <button type="button" class="quick-chip" data-query="How does Google OR-Tools optimize budget?">⚙️ How does OR-Tools optimize budget?</button>
+        <button type="button" class="quick-chip" data-query="What is the 6-factor HVI formula?">📐 6-Factor HVI Formula</button>
+        <button type="button" class="quick-chip" data-query="Explain the Google Cloud (GCP) architecture">☁️ GCP Architecture & Cloud Run</button>
+      </div>
+
+      <!-- Messages Stream Area -->
+      <div class="copilot-messages-container" id="copilot-messages">
+        <div class="copilot-msg bot-msg">
+          <div class="copilot-msg-bubble">
+            👋 <b>Hi! I'm the Avani Project Help Bot.</b><br>
+            I am trained on our application knowledge base and can answer any architectural, mathematical, satellite, or intervention question about <b>Avani Albedo</b>.<br><br>
+            🔒 <i>Security Guardrail: I provide answers from our project models only, and never share API keys, credentials, or passwords under any circumstances.</i><br><br>
+            Click any chip above or type your question below!
+          </div>
+        </div>
+      </div>
+
+      <!-- Input Form -->
+      <form class="copilot-input-form" id="copilot-form">
+        <input type="text" id="copilot-input" class="copilot-input" placeholder="Ask any question about this project..." autocomplete="off">
+        <button type="submit" class="copilot-send-btn" id="copilot-send-btn" title="Send message">
+          <span>➤</span>
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   
-  <!-- Custom App JS -->
-  <script src="/static/js/app.js"></script>
+  <!-- Firebase App & Auth SDK for 1-Click Google Sign-In -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+  <!-- Custom App JS with cache busting -->
+  <script src="/static/js/app.js?v=20261016-2"></script>
 </body>
 </html>

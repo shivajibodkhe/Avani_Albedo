@@ -1,0 +1,31 @@
+# Git and Virtual Environments
+.git
+.gitignore
+.venv
+venv
+env
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Node and local packages
+node_modules
+
+# Secrets and local config
+.env
+.env.*
+*.key
+*.pem
+service-account*.json
+credentials.json
+
+# Cache and temporary test files
+.pytest_cache
+.coverage
+htmlcov
+.DS_Store
+.vscode
+.idea
+*.log
+scratch/

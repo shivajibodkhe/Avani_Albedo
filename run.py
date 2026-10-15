@@ -15,6 +15,6 @@ if __name__ == "__main__":
     print("\n" + "="*60)
     print("🌍 AVANI ALBEDO: Prescriptive Climate Resilience Engine")
     print(f"📡 Serving on http://{host}:{port} (or http://localhost:{port})")
-    print("📑 Interactive API docs: http://localhost:8000/docs")
+    print(f"📑 Interactive API docs: http://localhost:{port}/docs")
     print("="*60 + "\n")
     uvicorn.run("app.main:app", host=host, port=port, reload=True)

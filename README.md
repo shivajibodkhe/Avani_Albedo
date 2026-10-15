@@ -14,9 +14,13 @@ Urban Heat Islands (UHI) disproportionately impact dense metropolitan centers, d
 
 **Avani Albedo** is an agentic urban-climate decision-support engine that combines:
 - **Satellite Multi-Spectral Intelligence:** Landsat 8/9 Thermal Infrared (LST), Sentinel-2 (NDVI, NDBI), and surface albedo reflectance.
+- **Dual Temperature Observation Modes:**
+  - **Surface Temperature Mode:** Sourced from *Landsat 8/9 Thermal Infrared Sensor* & *Google Earth Engine*; measures *Land Surface Temperature (LST)* and heat absorbed by roads, roofs, and concrete (e.g., Bengaluru Surface: **~42.8°C**).
+  - **Ambient Air Temperature Mode:** Sourced from *Weather APIs (AccuWeather/IMD)*; measures *human-experienced shaded air temperature* in 2m Stevenson screens (e.g., Bengaluru Air: **~31.5°C**).
 - **BigQuery Geospatial Analytics:** Exposure modeling across critical urban assets (schools, hospitals, transit terminals, population density).
 - **Prescriptive Optimization (Google OR-Tools):** Mixed-Integer Linear Programming (MIP) that determines the mathematical Pareto-optimal distribution of 4 core climate interventions under budget constraints.
 - **Vertex AI / Gemini 2.0 Flash:** Explainable AI planning agent generating municipal-grade climate action plans, implementation roadmaps, and thermodynamic rationale.
+- **Avani Project Help Bot & Extensible Knowledge Base:** Floating AI assistant at the bottom-right corner powered by Gemini 2.5 Flash and a dedicated knowledge base (`app/data/help_bot_knowledge.json`). Answers questions strictly from our app only, with strict security guardrails preventing any leakage of credentials or API keys.
 
 ---
 
@@ -42,31 +46,71 @@ Exportable Climate Action Plan (PDF / JSON / Printable Briefing)
 
 ---
 
-## 🚀 Quickstart Guide
+## 🚀 How to Start the App Locally
 
-### Option 1: Automatic One-Line Launch (macOS / Linux)
+### Quick Start (1 Step)
+
 ```bash
 ./run.sh
 ```
-This script automatically sets up the Python virtual environment, installs dependencies, and launches the server.
+*(This automatically detects or creates `.venv`, installs dependencies, and boots the FastAPI server with live reload.)*
 
-### Option 2: Manual Setup
+---
+
+### Step-by-Step Manual Setup
+
+If you prefer running commands manually:
+
 ```bash
-# 1. Create and activate Python virtual environment
+# 1. Navigate to the project root directory
+cd /Users/itsd-shivaji/Documents/Avani_Albedo_Dev
+
+# 2. Create Python virtual environment (if not already created)
 python3 -m venv .venv
+
+# 3. Activate the virtual environment
 source .venv/bin/activate
 
-# 2. Install dependencies
+# 4. Install / upgrade required dependencies
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# 3. Launch application
+# 5. Configure environment variables (if not already set)
+cp -n .env.example .env
+
+# 6. Start the local server
 python run.py
+# (Alternative: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000)
 ```
 
-Open your browser at:
-- **Interactive UI Dashboard:** [http://localhost:8000](http://localhost:8000)
-- **Interactive Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+---
+
+### 🌐 Accessing the Application
+
+Once the server is running, open your web browser:
+
+| Interface | URL | Description |
+| :--- | :--- | :--- |
+| **Interactive Web UI** | [http://localhost:8000](http://localhost:8000) | Full GIS dashboard, thermal timeline, optimization sliders & AI planner |
+| **Swagger API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive OpenAPI / Swagger documentation for all REST endpoints |
+| **Health Check API** | [http://localhost:8000/api/status](http://localhost:8000/api/status) | Real-time connection status of Vertex AI, Earth Engine, BigQuery, and Firestore |
+
+---
+
+### 🔑 Demo / Judge & Admin Login Credentials
+
+- **Judge / Evaluator Access:**
+  - **Allowed Emails:** `srbodkhe@gmail.com`, `judge@hackathon.com`, `evaluator@ai-builder.cup`
+  - **Password:** `avani2026`
+- **Admin Portal Access** (via top-right **🔒 Admin Portal** button):
+  - **Email:** `admin@avani.eco`
+  - **Password:** `AdminPass123!`
+
+---
+
+### 🛑 How to Stop the App
+
+Press **`Ctrl + C`** in the terminal where `python run.py` or `./run.sh` is running.
 
 ---
 
