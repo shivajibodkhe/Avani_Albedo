@@ -1,3 +1,34 @@
+// Global fetch interceptor to securely attach bearer token & credentials
+const _originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+  const token = localStorage.getItem('avani_token');
+  const opts = Object.assign({}, options);
+  opts.credentials = opts.credentials || 'same-origin';
+  if (token && typeof url === 'string' && url.startsWith('/api/') && !url.includes('/api/auth/login') && !url.includes('/api/auth/firebase-login')) {
+    opts.headers = Object.assign({}, opts.headers);
+    if (!opts.headers['Authorization']) {
+      opts.headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  return _originalFetch.call(this, url, opts);
+};
+
+// Initialize Firebase for 1-Click Google Sign-In
+try {
+  if (window.firebase && !firebase.apps.length) {
+    firebase.initializeApp({
+      projectId: "avani-albedo",
+      appId: "1:615055398519:web:f6c09d29e5bb2982d6d872",
+      storageBucket: "avani-albedo.firebasestorage.app",
+      apiKey: "AIzaSyDrRVQqwPRA8vGdpHgzZlDNgwqN4XzxeNc",
+      authDomain: "avani-albedo.firebaseapp.com",
+      messagingSenderId: "615055398519"
+    });
+  }
+} catch (e) {
+  console.warn("Firebase initialization notice:", e);
+}
+
 // Avani Albedo Interactive GIS Client
 let map;
 let climateCells = [];
@@ -252,6 +283,18 @@ function initEventHandlers() {
   const firebaseGoogleBtn = document.getElementById('firebase-google-btn');
   if (firebaseGoogleBtn) firebaseGoogleBtn.addEventListener('click', handleFirebaseGoogleLogin);
 
+  const closeGoogleBtn = document.getElementById('close-google-auth-btn');
+  if (closeGoogleBtn) closeGoogleBtn.addEventListener('click', () => {
+    const modal = document.getElementById('google-auth-modal');
+    if (modal) modal.classList.add('hidden');
+  });
+
+  const cancelGoogleBtn = document.getElementById('google-auth-cancel-btn');
+  if (cancelGoogleBtn) cancelGoogleBtn.addEventListener('click', () => {
+    const modal = document.getElementById('google-auth-modal');
+    if (modal) modal.classList.add('hidden');
+  });
+
   // Admin Portal Trigger & Close
   const openAdminBtn = document.getElementById('open-admin-btn');
   if (openAdminBtn) openAdminBtn.addEventListener('click', openAdminModal);
@@ -281,6 +324,17 @@ function initEventHandlers() {
       const input = document.getElementById('admin-gemini-key');
       input.type = input.type === 'password' ? 'text' : 'password';
     });
+  }
+
+  // Admin Satellite Ingestion Handlers
+  const satCountrySelect = document.getElementById('admin-sat-country');
+  if (satCountrySelect) {
+    satCountrySelect.addEventListener('change', (e) => onAdminSatCountryChanged(e.target.value));
+  }
+
+  const startSatIngestionBtn = document.getElementById('start-sat-ingestion-btn');
+  if (startSatIngestionBtn) {
+    startSatIngestionBtn.addEventListener('click', handleSatelliteIngestion);
   }
 
   // Target Geography Cascading Handlers
@@ -338,12 +392,21 @@ function initEventHandlers() {
   const closeDataSourcesBtn = document.getElementById('close-data-sources-btn');
   if (dataSourcesBtn && dataSourcesModal) {
     dataSourcesBtn.addEventListener('click', () => {
+      const gcpModal = document.getElementById('gcp-stack-modal');
+      const infModal = document.getElementById('infra-modal');
+      if (gcpModal) gcpModal.classList.add('hidden');
+      if (infModal) infModal.classList.add('hidden');
       dataSourcesModal.classList.remove('hidden');
     });
   }
   if (closeDataSourcesBtn && dataSourcesModal) {
     closeDataSourcesBtn.addEventListener('click', () => {
       dataSourcesModal.classList.add('hidden');
+    });
+  }
+  if (dataSourcesModal) {
+    dataSourcesModal.addEventListener('click', (e) => {
+      if (e.target === dataSourcesModal) dataSourcesModal.classList.add('hidden');
     });
   }
 
@@ -353,12 +416,21 @@ function initEventHandlers() {
   const closeGcpStackBtn = document.getElementById('close-gcp-stack-btn');
   if (gcpStackBtn && gcpStackModal) {
     gcpStackBtn.addEventListener('click', () => {
+      const dsModal = document.getElementById('data-sources-modal');
+      const infModal = document.getElementById('infra-modal');
+      if (dsModal) dsModal.classList.add('hidden');
+      if (infModal) infModal.classList.add('hidden');
       gcpStackModal.classList.remove('hidden');
     });
   }
   if (closeGcpStackBtn && gcpStackModal) {
     closeGcpStackBtn.addEventListener('click', () => {
       gcpStackModal.classList.add('hidden');
+    });
+  }
+  if (gcpStackModal) {
+    gcpStackModal.addEventListener('click', (e) => {
+      if (e.target === gcpStackModal) gcpStackModal.classList.add('hidden');
     });
   }
 
@@ -573,48 +645,117 @@ async function handleLoginSubmit(e) {
 
 async function handleFirebaseGoogleLogin() {
   const errorMsg = document.getElementById('login-error-msg');
-  errorMsg.classList.add('hidden');
+  if (errorMsg) errorMsg.classList.add('hidden');
 
-  // Prompt user for their Google / Firebase email
-  const enteredEmail = prompt(
-    "🔥 Sign in with Google (Firebase Auth)\n\nEnter your Google email address:",
-    "srbodkhe@gmail.com"
-  );
+  // 1. Try 1-Click Google Sign-In via Firebase Popup
+  if (window.firebase && window.firebase.auth) {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await firebase.auth().signInWithPopup(provider);
+      if (result && result.user && result.user.email) {
+        const idToken = await result.user.getIdToken();
+        await executeGoogleLoginSubmit(result.user.email, result.user.displayName, idToken);
+        return;
+      }
+    } catch (popupErr) {
+      console.warn("Firebase popup closed or not enabled, displaying Google account access dialog:", popupErr);
+    }
+  }
 
-  if (!enteredEmail) return;
+  // 2. Fallback to Google Account modal dialog
+  const modal = document.getElementById('google-auth-modal');
+  const alertBox = document.getElementById('google-auth-alert');
+  const emailInput = document.getElementById('google-auth-email');
+  if (alertBox) alertBox.classList.add('hidden');
+  if (emailInput) {
+    emailInput.value = '';
+    setTimeout(() => emailInput.focus(), 150);
+  }
+  if (modal) modal.classList.remove('hidden');
+}
+
+async function executeGoogleLoginSubmit(email, displayName, token) {
+  const errorMsg = document.getElementById('login-error-msg');
+  const modal = document.getElementById('google-auth-modal');
+  const modalAlert = document.getElementById('google-auth-alert');
+  if (errorMsg) errorMsg.classList.add('hidden');
 
   try {
     const res = await fetch('/api/auth/firebase-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: enteredEmail,
-        displayName: enteredEmail.split('@')[0],
-        token: `mock_firebase_token_${Date.now()}`
+        email: email,
+        displayName: displayName || email.split('@')[0],
+        token: token || `google_token_${Date.now()}`
       })
     });
 
     const data = await res.json();
 
     if (!res.ok) {
-      // Unregistered or pending user - show alert notification
-      errorMsg.innerHTML = `<strong>⚠️ Registration Required:</strong><br>${data.detail || "An alert was sent to Super Admin (srbodkhe@gmail.com). You will receive access once approved."}`;
-      errorMsg.classList.remove('hidden');
+      // 403: Pending review or Access Request submitted
+      const msg = `<strong>⏳ Access Request Registered!</strong><br>${data.detail || 'Your Google account is awaiting Administrator approval.'}`;
+      if (modal && !modal.classList.contains('hidden') && modalAlert) {
+        modalAlert.style.background = 'rgba(245, 158, 11, 0.15)';
+        modalAlert.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+        modalAlert.style.color = '#fbbf24';
+        modalAlert.innerHTML = msg;
+        modalAlert.classList.remove('hidden');
+      } else if (errorMsg) {
+        errorMsg.style.background = 'rgba(245, 158, 11, 0.15)';
+        errorMsg.style.border = '1px solid rgba(245, 158, 11, 0.4)';
+        errorMsg.style.color = '#fbbf24';
+        errorMsg.innerHTML = msg;
+        errorMsg.classList.remove('hidden');
+      }
       return;
     }
 
+    // Success (User is approved & active!)
     localStorage.setItem('avani_token', data.token);
     localStorage.setItem('avani_email', data.email);
+    if (modal) modal.classList.add('hidden');
     showAuthenticatedUser(data.email);
   } catch (err) {
-    errorMsg.textContent = "Firebase Authentication Error. Check console.";
-    errorMsg.classList.remove('hidden');
+    if (errorMsg) {
+      errorMsg.textContent = "Google Sign-In Error. Please try again.";
+      errorMsg.classList.remove('hidden');
+    }
   }
 }
 
+window.submitGoogleAuth = async function(e) {
+  if (e) e.preventDefault();
+  const emailInput = document.getElementById('google-auth-email');
+  const alertBox = document.getElementById('google-auth-alert');
+  const submitBtn = document.getElementById('google-auth-submit-btn');
+  const email = (emailInput.value || '').trim().toLowerCase();
 
+  if (!email || !email.includes('@')) {
+    alertBox.style.background = 'rgba(239, 68, 68, 0.15)';
+    alertBox.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+    alertBox.style.color = '#f87171';
+    alertBox.textContent = 'Please enter a valid Gmail address.';
+    alertBox.classList.remove('hidden');
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span>⏳ Submitting...</span>';
+  alertBox.classList.add('hidden');
+
+  try {
+    await executeGoogleLoginSubmit(email, email.split('@')[0], `google_token_${Date.now()}`);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<span>🚀 Continue with Google</span>';
+  }
+};
 
 function handleLogout() {
+  fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   localStorage.removeItem('avani_token');
   localStorage.removeItem('avani_email');
   showLandingGateway();
@@ -686,9 +827,16 @@ function renderAdminAlerts(alerts) {
         <span class="alert-card-title">🚨 ${a.type}: <code>${a.user_email}</code></span>
         <span class="alert-card-desc">${a.message}</span>
       </div>
-      <div class="alert-actions">
-        <button class="btn-approve" onclick="resolveAdminAlert('${a.id}', 'approve')">✓ Approve User</button>
-        <button class="btn-reject" onclick="resolveAdminAlert('${a.id}', 'reject')">✕ Reject / Block</button>
+      <div class="alert-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <select id="alert-role-${a.id}" style="background: rgba(255,255,255,0.08); color: var(--color-cyan); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 5px 8px; font-size: 11px; cursor: pointer;">
+          <option value="Municipal Planner" selected>Role: Municipal Planner</option>
+          <option value="Climate Scientist">Role: Climate Scientist</option>
+          <option value="Urban Resilience Director">Role: Urban Resilience Director</option>
+          <option value="Judge / Evaluator">Role: Judge / Evaluator</option>
+          <option value="Super Admin">Role: Super Admin</option>
+        </select>
+        <button class="btn-approve" onclick="approveAlertWithRole('${a.id}')">✓ Approve & Assign Role</button>
+        <button class="btn-reject" onclick="resolveAdminAlert('${a.id}', 'reject')">✕ Reject</button>
       </div>
     </div>
   `).join('');
@@ -699,13 +847,29 @@ function renderAdminUsers(users) {
   const countTag = document.getElementById('users-count-tag');
   if (countTag) countTag.textContent = `${users.length} Registered Users`;
 
+  const availableRoles = [
+    "Municipal Planner",
+    "Climate Scientist",
+    "Urban Resilience Director",
+    "Judge / Evaluator",
+    "Super Admin"
+  ];
+
   tbody.innerHTML = users.map(u => {
     const statusClass = (u.status || 'active').toLowerCase();
     const isSuperAdmin = u.email === 'srbodkhe@gmail.com';
     return `
       <tr>
         <td><strong>${u.email}</strong> ${isSuperAdmin ? '👑 (Admin)' : ''}</td>
-        <td>${u.role}</td>
+        <td>
+          ${isSuperAdmin ? `
+            <span style="color: var(--color-cyan); font-weight: 600;">Super Admin</span>
+          ` : `
+            <select class="admin-role-select" onchange="promoteUserRole('${u.email}', this.value)" title="Promote or Change Role" style="background: rgba(255,255,255,0.08); color: var(--color-cyan); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 4px 6px; font-size: 12px; cursor: pointer;">
+              ${availableRoles.map(r => `<option value="${r}" ${u.role === r ? 'selected' : ''}>${r}</option>`).join('')}
+            </select>
+          `}
+        </td>
         <td><span class="user-status-badge ${statusClass}">${u.status}</span></td>
         <td><code>${u.provider || 'direct'}</code></td>
         <td>${u.login_count || 1}</td>
@@ -841,6 +1005,127 @@ window.resolveAdminAlert = async function(alertId, action) {
     alert("Alert resolve error: " + err);
   }
 };
+
+function onAdminSatCountryChanged(country) {
+  const citySelect = document.getElementById('admin-sat-city');
+  if (!citySelect) return;
+  const citiesByCountry = {
+    "India": [
+      { name: "Bengaluru (12 Wards)", val: "Bengaluru" },
+      { name: "Mumbai MMR (6 Wards)", val: "Mumbai" },
+      { name: "Delhi NCR (6 Wards)", val: "Delhi" },
+      { name: "Hyderabad GHMC (4 Wards)", val: "Hyderabad" },
+      { name: "Pune PMRDA (5 Wards)", val: "Pune" },
+      { name: "Chennai GCC (5 Wards)", val: "Chennai" },
+      { name: "Kolkata KMC (4 Wards)", val: "Kolkata" },
+      { name: "Ahmedabad AMC (4 Wards)", val: "Ahmedabad" },
+      { name: "Jaipur JDA (3 Wards)", val: "Jaipur" }
+    ],
+    "UAE": [
+      { name: "Dubai Urban (3 Wards)", val: "Dubai" },
+      { name: "Abu Dhabi (2 Wards)", val: "Abu Dhabi" }
+    ],
+    "USA": [
+      { name: "Phoenix Metro (3 Wards)", val: "Phoenix" },
+      { name: "Las Vegas Valley (3 Wards)", val: "Las Vegas" },
+      { name: "Austin Capital (2 Wards)", val: "Austin" }
+    ]
+  };
+
+  const list = citiesByCountry[country] || citiesByCountry["India"];
+  citySelect.innerHTML = list.map(c => `<option value="${c.val}">${c.name}</option>`).join('');
+}
+
+async function handleSatelliteIngestion() {
+  const btn = document.getElementById('start-sat-ingestion-btn');
+  const country = document.getElementById('admin-sat-country').value;
+  const city = document.getElementById('admin-sat-city').value;
+  const consoleEl = document.getElementById('sat-ingestion-console');
+
+  if (!btn || !consoleEl) return;
+
+  btn.disabled = true;
+  btn.innerHTML = `<span>⏳ Ingesting Landsat & Sentinel Telemetry for ${city}...</span>`;
+  consoleEl.classList.remove('hidden');
+  consoleEl.innerHTML = `<div style="color: #38bdf8;">[INIT] Handshaking with Google Earth Engine & NASA/USGS Radiometric Catalogs...</div>`;
+
+  try {
+    const res = await fetch('/api/admin/satellite/fetch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ country, city })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Ingestion failed with HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const logs = data.telemetry_logs || [];
+
+    for (let i = 0; i < logs.length; i++) {
+      await new Promise(r => setTimeout(r, 120));
+      const line = document.createElement('div');
+      line.textContent = logs[i];
+      if (logs[i].includes('Complete')) {
+        line.style.color = '#34d399';
+        line.style.fontWeight = 'bold';
+      }
+      consoleEl.appendChild(line);
+      consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    if (city.toLowerCase() === currentSelectedCity.toLowerCase()) {
+      await loadClimateCells(currentSelectedCity);
+    }
+    loadAdminDashboard();
+  } catch (err) {
+    const errLine = document.createElement('div');
+    errLine.style.color = '#ef4444';
+    errLine.textContent = `[ERROR] Failed to complete satellite ingestion: ${err.message}`;
+    consoleEl.appendChild(errLine);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span>🚀 Start Satellite Data Ingestion & Calibration</span>`;
+  }
+}
+
+window.approveAlertWithRole = async function(alertId) {
+  const select = document.getElementById(`alert-role-${alertId}`);
+  const role = select ? select.value : "Municipal Planner";
+  try {
+    const res = await fetch('/api/admin/alerts/resolve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ alert_id: alertId, action: 'approve', role: role })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      renderAdminAlerts(data.alerts || []);
+      renderAdminUsers(data.users || []);
+      checkAdminAlerts();
+    }
+  } catch (err) {
+    alert("Approval error: " + err);
+  }
+};
+
+window.promoteUserRole = async function(email, newRole) {
+  try {
+    const res = await fetch('/api/admin/users/role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role: newRole })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to update role");
+    renderAdminUsers(data.users || []);
+    alert(`👑 Role updated: ${email} is now a ${newRole}!`);
+  } catch (err) {
+    alert("Role update error: " + err.message);
+  }
+};
+
 async function loadSystemStatus() {
   try {
     const res = await fetch('/api/status');

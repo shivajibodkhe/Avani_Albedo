@@ -83,9 +83,26 @@ The following required APIs are already enabled:
 - ✅ `datastore.googleapis.com` (Firestore / Datastore)
 - ✅ `storage.googleapis.com` (Google Cloud Storage)
 - ✅ `logging.googleapis.com` & `monitoring.googleapis.com` (Cloud Operations)
+- ✅ `run.googleapis.com` (Cloud Run)
+- ✅ `cloudbuild.googleapis.com` (Cloud Build)
+- ✅ `artifactregistry.googleapis.com` (Container Registry)
+- ✅ `firebase.googleapis.com` (Firebase Management)
+- ✅ `identitytoolkit.googleapis.com` (Firebase Authentication / Identity Platform)
 
-Next APIs to enable for deployment:
-- `run.googleapis.com` (Cloud Run)
-- `cloudbuild.googleapis.com` (Cloud Build for container building)
-- `artifactregistry.googleapis.com` (Container Registry)
-- `aiplatform.googleapis.com` (Vertex AI / Gemini)
+---
+
+## 🔥 Firebase Project & Web App Configuration
+
+> **Firebase Console URL:** [https://console.firebase.google.com/project/avani-albedo/overview](https://console.firebase.google.com/project/avani-albedo/overview)
+
+```json
+{
+  "projectId": "avani-albedo",
+  "appId": "1:615055398519:web:f6c09d29e5bb2982d6d872",
+  "storageBucket": "avani-albedo.firebasestorage.app",
+  "apiKey": "AIzaSyDrRVQqwPRA8vGdpHgzZlDNgwqN4XzxeNc",
+  "authDomain": "avani-albedo.firebaseapp.com",
+  "messagingSenderId": "615055398519",
+  "projectNumber": "615055398519"
+}
+```

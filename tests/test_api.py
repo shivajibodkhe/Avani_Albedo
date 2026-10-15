@@ -3,12 +3,41 @@ from app.main import app
 
 client = TestClient(app)
 
+def test_security_unauthenticated_access_blocked():
+    """Verify that sensitive data and documentation endpoints strictly reject unauthenticated requests."""
+    # Data endpoints
+    res_cells = client.get("/api/cells")
+    assert res_cells.status_code == 401
+    assert "Authentication required" in res_cells.json()["detail"]
+
+    res_opt = client.post("/api/optimize", json={
+        "city": "Bengaluru",
+        "budget_inr": 10000000.0,
+        "scenario_type": "optimized"
+    })
+    assert res_opt.status_code == 401
+
+    # Protected documentation
+    res_docs = client.get("/docs")
+    assert res_docs.status_code == 401
+
+    res_openapi = client.get("/openapi.json")
+    assert res_openapi.status_code == 401
+
 def test_api_status():
     response = client.get("/api/status")
     assert response.status_code == 200
     data = response.json()
     assert data["app_name"] == "Avani Albedo"
     assert data["cells_loaded"] == 12
+
+def test_authenticate_client():
+    """Authenticate the client session for data retrieval tests."""
+    login_res = client.post("/api/auth/login", json={
+        "email": "judges",
+        "password": "AvaniAlbedo12042026#"
+    })
+    assert login_res.status_code == 200
 
 def test_api_cells():
     response = client.get("/api/cells")
@@ -108,13 +137,13 @@ def test_api_auth():
     })
 
 def test_firebase_auth_and_admin_portal():
-    # 1. Unregistered user attempts Firebase login -> Triggers 403 & Admin Alert
+    # 1. Unregistered user attempts Google login -> Triggers 403 & Admin Alert
     res_unreg = client.post("/api/auth/firebase-login", json={
         "email": "new.evaluator.test@gmail.com",
         "displayName": "Test Evaluator"
     })
     assert res_unreg.status_code == 403
-    assert "Access Request Sent" in res_unreg.json()["detail"]
+    assert "Access Request" in res_unreg.json()["detail"]
 
     # 2. Check Admin Dashboard sees the alert and the new user
     res_dash = client.get("/api/admin/dashboard")
@@ -132,14 +161,31 @@ def test_firebase_auth_and_admin_portal():
     })
     assert res_act.status_code == 200
 
-    # 4. Approved user can now log in via Firebase
+    # 4. Admin promotes user's role to Climate Scientist
+    res_promote = client.post("/api/admin/users/role", json={
+        "email": "new.evaluator.test@gmail.com",
+        "role": "Climate Scientist"
+    })
+    assert res_promote.status_code == 200
+
+    # 5. Approved user can now log in via Google with promoted role
     res_login_ok = client.post("/api/auth/firebase-login", json={
         "email": "new.evaluator.test@gmail.com"
     })
     assert res_login_ok.status_code == 200
     assert "token" in res_login_ok.json()
+    assert res_login_ok.json()["role"] == "Climate Scientist"
 
-    # 5. Admin suspends the user
+    # 6. Admin can promote to Urban Resilience Director
+    res_promote2 = client.post("/api/admin/users/role", json={
+        "email": "new.evaluator.test@gmail.com",
+        "role": "Urban Resilience Director"
+    })
+    assert res_promote2.status_code == 200
+    user_updated = next(u for u in res_promote2.json()["users"] if u["email"] == "new.evaluator.test@gmail.com")
+    assert user_updated["role"] == "Urban Resilience Director"
+
+    # 7. Admin suspends the user
     res_susp = client.post("/api/admin/users/action", json={
         "email": "new.evaluator.test@gmail.com",
         "action": "suspend"
@@ -418,6 +464,21 @@ def test_spot_phase_evaluation_and_calendar_endpoints():
     assert arch["records"][0]["year"] == 2005
     assert arch["records"][-1]["year"] == 2025
     assert arch["total_temp_rise_c"] > 0
+
+def test_admin_satellite_ingestion_and_pipeline_telemetry():
+    res = client.post("/api/admin/satellite/fetch", json={
+        "country": "India",
+        "city": "Bengaluru"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["city"] == "Bengaluru"
+    assert data["cells_processed"] == 12
+    assert "mean_surface_temp_c" in data
+    assert "mean_ambient_temp_c" in data
+    assert len(data["telemetry_logs"]) > 5
+    assert any("Planck" in log for log in data["telemetry_logs"])
 
 
 

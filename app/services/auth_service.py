@@ -63,6 +63,17 @@ class AuthService:
             "role": user_info["role"]
         }
 
+    def create_session(self, email: str, role: str) -> str:
+        """Creates and stores an active 7-day session token for an authenticated user."""
+        token = secrets.token_hex(24)
+        expires_at = time.time() + (86400 * 7)
+        self._active_sessions[token] = {
+            "email": email.strip().lower(),
+            "role": role,
+            "expires_at": expires_at
+        }
+        return token
+
     def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         if not self.is_auth_enabled:
             return {"email": "guest@avani.eco", "role": "Municipal Planner"}
