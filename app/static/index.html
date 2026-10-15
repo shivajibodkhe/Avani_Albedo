@@ -46,19 +46,21 @@
         <span id="auth-user-email">judges</span>
         <button id="logout-btn" class="logout-btn" title="Sign out">✕</button>
       </div>
-      <button class="secondary-btn" id="data-sources-btn" title="View Scientific Satellite Data Lineage & Calibration" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(52, 211, 153, 0.5); color: #34d399;">
-        🔬 Satellite Data & Lineage
-      </button>
-      <button class="secondary-btn" id="gcp-stack-btn" title="View Google Cloud Technologies & Sustainability Alignment" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(168, 85, 247, 0.5); color: #c084fc;">
-        ☁️ GCP Stack & Impact
-      </button>
-      <button class="secondary-btn" id="infra-modal-btn" title="View Paid GCP Architecture & Hosting Steps" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(6, 182, 212, 0.5); color: #38bdf8;">
-        🚀 Hosting Guide
-      </button>
-      <button class="admin-portal-btn" id="open-admin-btn" title="Admin Control Center">
-        <span>⚙️ Admin</span>
-        <span class="admin-alert-badge hidden" id="admin-alert-badge">0</span>
-      </button>
+      <div class="dashboard-nav-actions hidden" id="dashboard-nav-actions" style="display: flex; gap: 8px; align-items: center;">
+        <button class="secondary-btn" id="data-sources-btn" title="View Scientific Satellite Data Lineage & Calibration" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(52, 211, 153, 0.5); color: #34d399;">
+          🔬 Satellite Data & Lineage
+        </button>
+        <button class="secondary-btn" id="gcp-stack-btn" title="View Google Cloud Technologies & Sustainability Alignment" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(168, 85, 247, 0.5); color: #c084fc;">
+          ☁️ GCP Stack & Impact
+        </button>
+        <button class="secondary-btn" id="infra-modal-btn" title="View Paid GCP Architecture & Hosting Steps" style="padding: 5px 10px; font-size: 11px; font-weight: 600; border-color: rgba(6, 182, 212, 0.5); color: #38bdf8;">
+          🚀 Hosting Guide
+        </button>
+        <button class="admin-portal-btn" id="open-admin-btn" title="Admin Control Center">
+          <span>⚙️ Admin</span>
+          <span class="admin-alert-badge hidden" id="admin-alert-badge">0</span>
+        </button>
+      </div>
       <a href="https://github.com/shivajibodkhe/Avani_Albedo" target="_blank" rel="noreferrer" class="github-link" title="View Source on GitHub">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
@@ -68,8 +70,116 @@
     </div>
   </header>
 
-  <!-- Main Grid Layout -->
-  <main class="app-layout">
+  <!-- DEDICATED SECURE LANDING GATEWAY (Visible to unauthenticated visitors) -->
+  <section class="landing-gateway-page" id="landing-gateway-page">
+    <div class="landing-container">
+      
+      <!-- Landing Hero -->
+      <div class="landing-hero">
+        <div class="landing-badge">
+          <span class="pulse-dot"></span>
+          <span>Mission-Critical Climate Intelligence • Secured Enterprise Architecture</span>
+        </div>
+        <h1 class="landing-title">AVANI ALBEDO</h1>
+        <p class="landing-subtitle">
+          Urban Heat Action Agent & Prescriptive Climate Resilience Engine. High-precision satellite radiometric thermal analytics (Landsat 8/9 & Sentinel-2), spatial microclimate optimization, and automated intervention matrices.
+        </p>
+      </div>
+
+      <!-- Sign In to Access Engine Terminal Card -->
+      <div class="landing-auth-card">
+        <div class="landing-card-header">
+          <div class="landing-card-icon">🔐</div>
+          <div class="landing-card-header-text">
+            <h3>Authorized Evaluator & Admin Portal</h3>
+            <p>Enter your credentials to unlock the Decision Engine dashboard</p>
+          </div>
+        </div>
+
+        <form id="login-form" class="login-form">
+          <div class="landing-form-group">
+            <label for="login-email">Username or Authorized Admin Email</label>
+            <input type="text" id="login-email" class="form-control" placeholder="judges or shiv@webveer.com" required autocomplete="username">
+          </div>
+
+          <div class="landing-form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+
+          <div class="login-error-msg hidden" id="login-error-msg">
+            Access Denied: Invalid credentials or account is not authorized.
+          </div>
+
+          <button type="submit" class="landing-submit-btn" id="login-submit-btn">
+            <span>🚀 Authenticate & Launch Engine</span>
+          </button>
+        </form>
+
+        <div class="login-divider"><span>OR GOOGLE SIGN-IN</span></div>
+
+        <button type="button" class="firebase-google-btn" id="firebase-google-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+          <span>Sign In with Google (Admin Whitelist)</span>
+        </button>
+
+        <div class="login-whitelist-footer" style="margin-top: 4px;">
+          <span>Authorized Whitelist: <code>shiv@webveer.com</code>, <code>srbodkhe@gmail.com</code> | Judges ID: <code>judges</code></span>
+        </div>
+      </div>
+
+      <!-- Feature Showcase Grid -->
+      <div class="landing-features-grid">
+        <div class="landing-feature-card">
+          <div class="feature-card-icon">🛰️</div>
+          <div class="feature-card-title">Dual-Mode Satellite Thermography</div>
+          <p class="feature-card-desc">
+            Direct ingestion of Landsat 8/9 Thermal Infrared Sensor (TIRS) Land Surface Temperature and IMD weather ambient air telemetry across urban wards.
+          </p>
+        </div>
+
+        <div class="landing-feature-card">
+          <div class="feature-card-icon">⚡</div>
+          <div class="feature-card-title">OR-Tools SCIP Optimization</div>
+          <p class="feature-card-desc">
+            Constrained mathematical solver generating Pareto-optimal intervention portfolios across High-Albedo Cool Roofs, Urban Canopy, and Shading.
+          </p>
+        </div>
+
+        <div class="landing-feature-card">
+          <div class="feature-card-icon">🤖</div>
+          <div class="feature-card-title">Gemini 2.5 Flash Prescriptive Co-Pilot</div>
+          <p class="feature-card-desc">
+            AI-driven multi-agent municipal resilience reports, cost-benefit trade-offs, and ward-level actionable engineering playbooks.
+          </p>
+        </div>
+      </div>
+
+      <!-- Live Infrastructure Telemetry Bar -->
+      <div class="landing-telemetry-bar">
+        <div class="telemetry-item">
+          <span>☁️ GCP Region:</span>
+          <strong>asia-south1 (Mumbai)</strong>
+        </div>
+        <div class="telemetry-item">
+          <span>🛡️ Cost Guardrail:</span>
+          <strong>Scale-to-Zero (&lt; ₹1,000/mo)</strong>
+        </div>
+        <div class="telemetry-item">
+          <span>🗄️ Database:</span>
+          <strong>Firestore Native</strong>
+        </div>
+        <div class="telemetry-item">
+          <span>📊 Analytics:</span>
+          <strong>BigQuery Geospatial</strong>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Main Grid Layout (Hidden until authenticated) -->
+  <main class="app-layout hidden" id="dashboard-app-layout">
     
     <!-- Left Sidebar: Controls & Scenario Setup -->
     <aside class="sidebar-panel">
@@ -655,53 +765,7 @@
     </aside>
   </main>
 
-  <!-- Judge & Evaluator Auth Login Modal (Enforced by default on page load) -->
-  <div class="modal-overlay" id="login-modal-overlay">
-    <div class="login-modal-card">
-      <div class="login-modal-header">
-        <div class="login-badge-icon">🔐</div>
-        <h2>Access Restricted</h2>
-        <p class="login-subtitle">Avani Albedo Prescriptive Climate Decision Engine</p>
-      </div>
 
-      <div class="judge-access-notice">
-        <strong>🔒 Protected Access:</strong>
-        <p>This deployment is private and strictly protected. Enter your credentials (e.g. <code>judges</code> or admin <code>shiv@webveer.com</code>) with your password to access.</p>
-      </div>
-
-      <form id="login-form" class="login-form">
-        <div class="form-group">
-          <label for="login-email">Username or Authorized Admin Email</label>
-          <input type="text" id="login-email" class="form-control" placeholder="judges or shiv@webveer.com" required>
-        </div>
-
-        <div class="form-group">
-          <label for="login-password">Password</label>
-          <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
-        </div>
-
-        <div class="login-error-msg hidden" id="login-error-msg">
-          Access Denied: Invalid credentials or account is not authorized.
-        </div>
-
-        <button type="submit" class="primary-btn login-submit-btn" id="login-submit-btn">
-          Sign In to Decision Engine
-        </button>
-      </form>
-
-      <div class="login-divider"><span>OR GOOGLE SIGN-IN</span></div>
-
-      <!-- Firebase Google Sign-In Button -->
-      <button type="button" class="firebase-google-btn" id="firebase-google-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.36 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.36 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-        <span>Sign In with Google (Admin Whitelist)</span>
-      </button>
-
-      <div class="login-whitelist-footer">
-        <span>Authorized Whitelist: <code>shiv@webveer.com</code>, <code>srbodkhe@gmail.com</code> | Judges ID: <code>judges</code></span>
-      </div>
-    </div>
-  </div>
 
   <!-- Super Admin Control Center Modal -->
   <div class="modal-overlay hidden" id="admin-modal-overlay">

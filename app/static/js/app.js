@@ -102,14 +102,10 @@ function updateBudgetDisplay() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  initMap();
   initEventHandlers();
-  initAuth();
   loadSystemStatus();
-  await loadGeographicHierarchy();
-  loadClimateCells(currentSelectedCity);
-  loadTimelapseData(currentSelectedCity);
   initCopilot();
+  await initAuth();
 });
 
 
@@ -449,21 +445,71 @@ function selectAndLoadScenario(scenarioKey) {
 
 // ================= AUTHENTICATION LOGIC =================
 let cachedAuthConfig = null;
+let isDashboardInitialized = false;
+
+function launchDashboardSession(email) {
+  const landing = document.getElementById('landing-gateway-page');
+  const dashboard = document.getElementById('dashboard-app-layout');
+  const navActions = document.getElementById('dashboard-nav-actions');
+  const userPill = document.getElementById('auth-user-pill');
+  const userText = document.getElementById('auth-user-email');
+
+  if (landing) landing.classList.add('hidden');
+  if (dashboard) dashboard.classList.remove('hidden');
+  if (navActions) navActions.classList.remove('hidden');
+  if (userPill && userText) {
+    userText.textContent = email;
+    userPill.classList.remove('hidden');
+  }
+
+  if (!isDashboardInitialized) {
+    isDashboardInitialized = true;
+    initMap();
+    loadGeographicHierarchy().then(() => {
+      loadClimateCells(currentSelectedCity);
+      loadTimelapseData(currentSelectedCity);
+    });
+  } else {
+    if (map) {
+      setTimeout(() => map.invalidateSize(), 200);
+    }
+  }
+
+  checkAdminAlerts();
+}
+
+function showLandingGateway() {
+  const landing = document.getElementById('landing-gateway-page');
+  const dashboard = document.getElementById('dashboard-app-layout');
+  const navActions = document.getElementById('dashboard-nav-actions');
+  const userPill = document.getElementById('auth-user-pill');
+
+  if (landing) landing.classList.remove('hidden');
+  if (dashboard) dashboard.classList.add('hidden');
+  if (navActions) navActions.classList.add('hidden');
+  if (userPill) userPill.classList.add('hidden');
+
+  const emailInput = document.getElementById('login-email');
+  const pwInput = document.getElementById('login-password');
+  if (emailInput) emailInput.value = '';
+  if (pwInput) pwInput.value = '';
+  const errorMsg = document.getElementById('login-error-msg');
+  if (errorMsg) errorMsg.classList.add('hidden');
+}
 
 async function initAuth() {
-  const overlay = document.getElementById('login-modal-overlay');
   try {
     const res = await fetch('/api/auth/config');
     cachedAuthConfig = await res.json();
     
     if (!cachedAuthConfig.auth_enabled) {
-      if (overlay) overlay.classList.add('hidden');
+      launchDashboardSession('public@avani.eco');
       return;
     }
 
     const token = localStorage.getItem('avani_token');
     if (!token) {
-      if (overlay) overlay.classList.remove('hidden');
+      showLandingGateway();
       return;
     }
 
@@ -474,29 +520,20 @@ async function initAuth() {
     
     if (verifyRes.ok) {
       const data = await verifyRes.json();
-      showAuthenticatedUser(data.email);
+      launchDashboardSession(data.email);
     } else {
       localStorage.removeItem('avani_token');
       localStorage.removeItem('avani_email');
-      if (overlay) overlay.classList.remove('hidden');
+      showLandingGateway();
     }
   } catch (err) {
     console.warn("Auth verification error:", err);
-    if (overlay) overlay.classList.remove('hidden');
+    showLandingGateway();
   }
 }
 
 function showAuthenticatedUser(email) {
-  document.getElementById('login-modal-overlay').classList.add('hidden');
-  const userPill = document.getElementById('auth-user-pill');
-  const userText = document.getElementById('auth-user-email');
-  if (userPill && userText) {
-    userText.textContent = email;
-    userPill.classList.remove('hidden');
-  }
-
-  // Load admin alert count in background
-  checkAdminAlerts();
+  launchDashboardSession(email);
 }
 
 async function handleLoginSubmit(e) {
@@ -580,11 +617,7 @@ async function handleFirebaseGoogleLogin() {
 function handleLogout() {
   localStorage.removeItem('avani_token');
   localStorage.removeItem('avani_email');
-  document.getElementById('auth-user-pill').classList.add('hidden');
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-password').value = '';
-  document.getElementById('login-error-msg').classList.add('hidden');
-  document.getElementById('login-modal-overlay').classList.remove('hidden');
+  showLandingGateway();
 }
 
 // ================= ADMIN PORTAL LOGIC =================
