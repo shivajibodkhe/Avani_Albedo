@@ -4,7 +4,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, timedelta
 from app.models.schemas import (
     ClimateCell, CriticalAssets, DayForecast, TemperatureTimelineResponse,
-    YearlyTimelapseRecord, CityTimelapseResponse,
+    TemperatureModeInfo, YearlyTimelapseRecord, CityTimelapseResponse,
     PhaseSpotEvaluation, SpotEvaluationSummary, HeatwaveMonthRisk, HeatCalendarSummary,
     TwentyYearRecord, TwentyYearArchiveResponse
 )
@@ -959,6 +959,25 @@ def get_temperature_timeline(city_name: str, cell_id: Optional[str] = None) -> T
     # Calculate hours above 38°C (hazardous duration)
     hazard_hours = 8.5 if peak_lst >= 42.0 else (6.0 if peak_lst >= 39.0 else 4.0)
 
+    surface_mode_info = TemperatureModeInfo(
+        name="Surface Temperature Mode",
+        mode_id="lst",
+        source="Landsat 8/9 Thermal Infrared Sensor, Google Earth Engine",
+        measures="Land Surface Temperature (LST) - Heat absorbed by roads, roofs, and concrete",
+        typical_example=f"Bengaluru Surface Temperature: ~42.8°C (Current {city_entry['name']}: ~{peak_lst:.1f}°C)",
+        sensor_platform="Landsat 8/9 TIRS Band 10 / Google Earth Engine",
+        typical_temp_c=peak_lst
+    )
+    ambient_mode_info = TemperatureModeInfo(
+        name="Ambient Air Temperature Mode",
+        mode_id="air",
+        source="Weather APIs (AccuWeather/IMD)",
+        measures="Human-experienced shaded air temperature",
+        typical_example=f"Bengaluru Air Temperature: ~31.5°C (Current {city_entry['name']}: ~{air_high:.1f}°C)",
+        sensor_platform="Ground Automatic Weather Stations (AWS) / AccuWeather / IMD",
+        typical_temp_c=air_high
+    )
+
     return TemperatureTimelineResponse(
         city=city_entry["name"],
         ward_id=target_cell["cell_id"],
@@ -980,7 +999,9 @@ def get_temperature_timeline(city_name: str, cell_id: Optional[str] = None) -> T
         air_baseline_temp_c=air_baseline_curve,
         air_cooled_temp_c=air_cooled_curve,
         lst_vs_air_delta_c=round(peak_lst - air_high, 1),
-        season_note="Peak Summer Heatwave Baseline (April/May) vs 2m Ambient Air Temp (Weather App)"
+        season_note="Peak Summer Heatwave Baseline (April/May) vs 2m Ambient Air Temp (Weather App)",
+        surface_mode=surface_mode_info,
+        ambient_mode=ambient_mode_info
     )
 
 

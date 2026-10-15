@@ -1,18 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Startup script for Avani Albedo
-set -e
-
+# Delegates to start_local.sh with all supplied arguments
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-cd "$DIR"
+exec "${DIR}/start_local.sh" "$@"
 
-if [ ! -d ".venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install --upgrade pip
-    pip install -r requirements.txt
-else
-    source .venv/bin/activate
-fi
-
-python run.py

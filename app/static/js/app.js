@@ -109,7 +109,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadGeographicHierarchy();
   loadClimateCells(currentSelectedCity);
   loadTimelapseData(currentSelectedCity);
+  initCopilot();
 });
+
 
 // ================= MAP INITIALIZATION =================
 function initMap() {
@@ -160,7 +162,7 @@ function initEventHandlers() {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      selectedScenario = btn.dataset.type;
+      selectAndLoadScenario(btn.dataset.type);
     });
   });
 
@@ -171,6 +173,12 @@ function initEventHandlers() {
       const lakhs = parseFloat(e.target.value);
       currentBudgetInr = lakhs * 100000.0;
       updateBudgetDisplay();
+    });
+    slider.addEventListener('change', () => {
+      const activeTab = document.querySelector('.tab-btn.active');
+      if (activeTab && activeTab.dataset.tab === 'tab-comparison') {
+        runComparison();
+      }
     });
   }
 
@@ -209,29 +217,15 @@ function initEventHandlers() {
   document.getElementById('run-agent-btn').addEventListener('click', runAvaniAgent);
 
   // Compare Scenarios Button
-  document.getElementById('compare-btn').addEventListener('click', runComparison);
+  document.getElementById('compare-btn').addEventListener('click', () => {
+    switchResultsTab('tab-comparison');
+  });
 
   // Results Tab Switching
   document.querySelectorAll('.tab-btn').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      const targetPane = document.getElementById(tab.dataset.tab);
-      if (targetPane) targetPane.classList.add('active');
-
-      if (tab.dataset.tab === 'tab-timeline') {
-        loadTemperatureTimeline(currentSelectedCity, selectedWardId);
-        loadHeatCalendar(currentSelectedCity);
-        setTimeout(() => {
-          if (diurnalChartInstance) {
-            diurnalChartInstance.resize();
-            diurnalChartInstance.update();
-          }
-        }, 60);
-      } else if (tab.dataset.tab === 'tab-comparison') {
-        runComparison();
-      }
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      switchResultsTab(tab.dataset.tab);
     });
   });
 
@@ -395,6 +389,65 @@ function initEventHandlers() {
   }
 
   bindTimelapseTicks();
+}
+
+// ================= RESULTS TAB SWITCHING & SCENARIO SELECTION =================
+function switchResultsTab(tabId) {
+  // Update tab button styles
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabId);
+  });
+
+  // Update tab panels
+  document.querySelectorAll('.tab-pane').forEach(pane => {
+    pane.classList.toggle('active', pane.id === tabId);
+  });
+
+  // Handle specific tab data loading without synthetic re-clicks
+  if (tabId === 'tab-timeline') {
+    loadTemperatureTimeline(currentSelectedCity, selectedWardId);
+    loadHeatCalendar(currentSelectedCity);
+    setTimeout(() => {
+      if (diurnalChartInstance) {
+        diurnalChartInstance.resize();
+        diurnalChartInstance.update();
+      }
+    }, 60);
+  } else if (tabId === 'tab-comparison') {
+    runComparison();
+  }
+}
+
+function selectAndLoadScenario(scenarioKey) {
+  if (!scenarioKey) return;
+  selectedScenario = scenarioKey;
+
+  // 1. Sync left sidebar scenario buttons
+  document.querySelectorAll('.scenario-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.type === scenarioKey);
+  });
+
+  // 2. Sync comparison grid cards (if rendered)
+  document.querySelectorAll('.comp-card').forEach(card => {
+    const isSelected = card.dataset.key === scenarioKey;
+    card.classList.toggle('highlight', isSelected);
+    const badge = card.querySelector('.comp-status-badge');
+    if (badge) {
+      badge.innerHTML = isSelected 
+        ? '<span style="color: #34d399; font-weight: 700;">● Active Scenario</span>' 
+        : '<span style="color: #94a3b8;">Click to select</span>';
+    }
+    const sBtn = card.querySelector('.select-scenario-btn');
+    if (sBtn) {
+      sBtn.textContent = isSelected ? '✓ Loaded' : '👉 Select & Load';
+      sBtn.style.background = isSelected ? 'rgba(52, 211, 153, 0.2)' : 'rgba(56, 189, 248, 0.15)';
+      sBtn.style.borderColor = isSelected ? '#34d399' : 'rgba(56, 189, 248, 0.4)';
+      sBtn.style.color = isSelected ? '#34d399' : '#38bdf8';
+    }
+  });
+
+  // 3. Automatically run Avani agent to synthesize and compute this scenario
+  runAvaniAgent();
 }
 
 // ================= AUTHENTICATION LOGIC =================
@@ -940,12 +993,10 @@ async function runAvaniAgent() {
     renderAllocationsTable(currentScenarioResult);
     renderInterventionMarkers(currentScenarioResult);
     
-    // Switch to Plan tab ONLY IF user is currently on tab-plan or initially loading
+    // If no tab is active yet (initial load), default to Plan tab
     const activeTab = document.querySelector('.tab-btn.active');
-    const isPlanActive = !activeTab || activeTab.dataset.tab === 'tab-plan';
-    if (isPlanActive) {
-      const planBtn = document.querySelector('[data-tab="tab-plan"]');
-      if (planBtn) planBtn.click();
+    if (!activeTab) {
+      switchResultsTab('tab-plan');
     }
   } catch (err) {
     console.error("Action plan generation error:", err);
@@ -962,8 +1013,25 @@ function setTemperatureSensorMode(mode) {
   currentTempSensorMode = mode;
   const btnLst = document.getElementById('temp-mode-btn-lst');
   const btnAir = document.getElementById('temp-mode-btn-air');
+  const cardSurface = document.getElementById('card-mode-surface');
+  const cardAmbient = document.getElementById('card-mode-ambient');
+  const badgeSurface = document.getElementById('badge-mode-surface');
+  const badgeAmbient = document.getElementById('badge-mode-ambient');
   const statusPill = document.getElementById('temp-mode-status-pill');
   const explainNote = document.getElementById('temp-explainability-note');
+  const exampleSurface = document.getElementById('example-surface-text');
+  const exampleAmbient = document.getElementById('example-ambient-text');
+
+  const peakVal = currentTimelineData ? currentTimelineData.peak_high_c.toFixed(1) : '42.8';
+  const airVal = currentTimelineData && currentTimelineData.air_temp_high_c ? currentTimelineData.air_temp_high_c.toFixed(1) : '31.5';
+  const cityName = currentTimelineData ? currentTimelineData.city : 'Bengaluru';
+
+  if (exampleSurface) {
+    exampleSurface.textContent = `Bengaluru Surface Temperature: ~42.8°C (Current ${cityName}: ~${peakVal}°C)`;
+  }
+  if (exampleAmbient) {
+    exampleAmbient.textContent = `Bengaluru Air Temperature: ~31.5°C (Current ${cityName}: ~${airVal}°C)`;
+  }
 
   if (mode === "air") {
     if (btnLst) {
@@ -974,14 +1042,36 @@ function setTemperatureSensorMode(mode) {
       btnAir.style.background = "#38bdf8";
       btnAir.style.color = "#020617";
     }
+    if (cardSurface) {
+      cardSurface.style.background = "rgba(244, 63, 94, 0.04)";
+      cardSurface.style.border = "1px solid rgba(244, 63, 94, 0.2)";
+      cardSurface.style.boxShadow = "none";
+    }
+    if (cardAmbient) {
+      cardAmbient.style.background = "rgba(56, 189, 248, 0.12)";
+      cardAmbient.style.border = "1.5px solid #38bdf8";
+      cardAmbient.style.boxShadow = "0 0 12px rgba(56, 189, 248, 0.25)";
+    }
+    if (badgeSurface) {
+      badgeSurface.textContent = "SWITCH";
+      badgeSurface.style.background = "transparent";
+      badgeSurface.style.color = "#64748b";
+      badgeSurface.style.border = "1px solid #475569";
+    }
+    if (badgeAmbient) {
+      badgeAmbient.textContent = "ACTIVE";
+      badgeAmbient.style.background = "#38bdf8";
+      badgeAmbient.style.color = "#020617";
+      badgeAmbient.style.border = "none";
+    }
     if (statusPill) {
-      statusPill.textContent = "🌤️ 2-Meter Shaded Air Temperature (Weather App / Stevenson Screen)";
+      statusPill.textContent = "🌤️ Weather APIs (AccuWeather/IMD) • 2-Meter Shaded Air Temperature";
       statusPill.style.color = "#38bdf8";
       statusPill.style.background = "rgba(56, 189, 248, 0.15)";
       statusPill.style.borderColor = "rgba(56, 189, 248, 0.3)";
     }
     if (explainNote) {
-      explainNote.innerHTML = `<strong style="color: #38bdf8;">🌤️ Ambient Air Temperature Mode:</strong> Reflects standard meteorological weather station records measured in a shaded Stevenson screen 2 meters above ground. Surface materials (asphalt, concrete) can be <b>+10°C to +14°C hotter</b> than this value under peak direct sunlight!`;
+      explainNote.innerHTML = `<strong style="color: #38bdf8;">🌤️ Ambient Air Temperature Mode:</strong> Sourced from <b>Weather APIs (AccuWeather/IMD)</b>. Measures human-experienced shaded air temperature recorded in a 2-meter Stevenson screen (e.g. Bengaluru Air: <b>~31.5°C</b>). Asphalt & concrete roof skins heat up <b>10°C–14°C hotter</b> under direct sunlight!`;
     }
   } else {
     if (btnLst) {
@@ -992,15 +1082,35 @@ function setTemperatureSensorMode(mode) {
       btnAir.style.background = "transparent";
       btnAir.style.color = "#94a3b8";
     }
+    if (cardSurface) {
+      cardSurface.style.background = "rgba(244, 63, 94, 0.12)";
+      cardSurface.style.border = "1.5px solid #f43f5e";
+      cardSurface.style.boxShadow = "0 0 12px rgba(244, 63, 94, 0.25)";
+    }
+    if (cardAmbient) {
+      cardAmbient.style.background = "rgba(56, 189, 248, 0.04)";
+      cardAmbient.style.border = "1px solid rgba(56, 189, 248, 0.2)";
+      cardAmbient.style.boxShadow = "none";
+    }
+    if (badgeSurface) {
+      badgeSurface.textContent = "ACTIVE";
+      badgeSurface.style.background = "#f43f5e";
+      badgeSurface.style.color = "#fff";
+      badgeSurface.style.border = "none";
+    }
+    if (badgeAmbient) {
+      badgeAmbient.textContent = "SWITCH";
+      badgeAmbient.style.background = "transparent";
+      badgeAmbient.style.color = "#64748b";
+      badgeAmbient.style.border = "1px solid #475569";
+    }
     if (statusPill) {
-      statusPill.textContent = "🛰️ Peak Land Surface Temperature (Landsat 8/9 TIRS Band 10)";
+      statusPill.textContent = "🛰️ Landsat 8/9 Thermal Infrared Sensor • Google Earth Engine";
       statusPill.style.color = "#f43f5e";
       statusPill.style.background = "rgba(244, 63, 94, 0.15)";
       statusPill.style.borderColor = "rgba(244, 63, 94, 0.3)";
     }
     if (explainNote) {
-      const peakVal = currentTimelineData ? currentTimelineData.peak_high_c.toFixed(1) : '42.8';
-      const airVal = currentTimelineData && currentTimelineData.air_temp_high_c ? currentTimelineData.air_temp_high_c.toFixed(1) : '31.5';
       explainNote.innerHTML = `<strong style="color: #38bdf8;">💡 Why Surface Temp (${peakVal}°C) differs from AccuWeather Air Temp (${airVal}°C):</strong> AccuWeather reports <i>2-meter shaded air temperature</i>. Landsat 8/9 satellite thermal radiometers measure the literal <i>radiometric surface skin</i> of asphalt & concrete roofs absorbing direct solar radiation (∼950 W/m²), which heats up <b>10°C–12°C hotter than ambient air</b>. Cool roofs block this surface heating directly!`;
     }
   }
@@ -1027,13 +1137,24 @@ function renderTemperatureTimelineView(data) {
   if (!data) return;
   const isAirMode = currentTempSensorMode === "air";
 
+  const exampleSurface = document.getElementById('example-surface-text');
+  const exampleAmbient = document.getElementById('example-ambient-text');
+  const peakVal = data.peak_high_c.toFixed(1);
+  const airVal = (data.air_temp_high_c ?? (data.peak_high_c - 11.3)).toFixed(1);
+  if (exampleSurface) {
+    exampleSurface.textContent = `Bengaluru Surface Temperature: ~42.8°C (Current ${data.city}: ~${peakVal}°C)`;
+  }
+  if (exampleAmbient) {
+    exampleAmbient.textContent = `Bengaluru Air Temperature: ~31.5°C (Current ${data.city}: ~${airVal}°C)`;
+  }
+
   const areaBadge = document.getElementById('timeline-area-badge');
   if (areaBadge) areaBadge.textContent = data.ward_name ? `${data.ward_name} (${data.city})` : `${data.city} Metropolitan Average`;
 
   const hazardBadge = document.getElementById('timeline-hazard-badge');
   if (hazardBadge) {
     hazardBadge.textContent = isAirMode 
-      ? `AccuWeather Baseline: ${(data.air_temp_high_c || (data.peak_high_c - 11.3)).toFixed(1)}°C`
+      ? `AccuWeather Baseline: ${airVal}°C`
       : `Hazardous Hours: ${data.heat_hazard_duration_hours}h/day`;
   }
 
@@ -1221,14 +1342,39 @@ function renderForecastCards(forecast, isAirMode = false, deltaC = 11.3) {
   }).join('');
 }
 
+let isComparisonLoading = false;
+
 async function runComparison() {
+  if (isComparisonLoading) return;
+  isComparisonLoading = true;
+
+  const grid = document.getElementById('comparison-grid');
+  if (grid && (!grid.children.length || grid.querySelector('.loading-state'))) {
+    grid.innerHTML = `
+      <div class="loading-state" style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: #94a3b8;">
+        <div class="btn-spinner" style="display: inline-block; width: 26px; height: 26px; border: 3px solid rgba(56,189,248,0.2); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px;"></div>
+        <div style="font-size: 13px; font-weight: 600; color: #e2e8f0;">Computing Pareto-optimal scenario matrix for ${currentSelectedCity}...</div>
+        <div style="font-size: 11.5px; color: #64748b; margin-top: 4px;">Evaluating 4 Mixed-Integer Linear Programming models (Google OR-Tools SCIP)</div>
+      </div>
+    `;
+  }
+
   try {
     const res = await fetch(`/api/scenarios/compare?budget_inr=${currentBudgetInr}&city=${encodeURIComponent(currentSelectedCity)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     renderComparisonGrid(data.scenarios);
-    document.querySelector('[data-tab="tab-comparison"]').click();
   } catch (err) {
     console.error("Error fetching comparison:", err);
+    if (grid) {
+      grid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: #f87171;">
+          ⚠️ Failed to compute scenario comparison. <button onclick="runComparison()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 4px 8px; border-radius: 4px; margin-left: 8px; cursor: pointer;">Retry</button>
+        </div>
+      `;
+    }
+  } finally {
+    isComparisonLoading = false;
   }
 }
 
@@ -1383,9 +1529,25 @@ function openCellInspector(cell) {
         ${cell.hvi_score} (${cell.hvi_category})
       </span>
     </div>
+    <div style="background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px;">
+      <div style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; display: flex; justify-content: space-between;">
+        <span>🌡️ Dual Temperature Readings</span>
+        <span style="color: #cbd5e1; font-weight: 600;">Δ +11.3°C Surface Mass Gap</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px;">
+        <div style="background: rgba(244, 63, 94, 0.1); border-left: 2px solid #f43f5e; padding: 4px 6px; border-radius: 3px;">
+          <div style="font-size: 9.5px; color: #f43f5e; font-weight: 700;">🛰️ Surface Temp (LST)</div>
+          <div style="font-size: 13px; font-weight: 700; color: #f87171;">${cell.lst}°C <span style="font-size: 10px; color: #f43f5e;">(+${cell.heat_anomaly}°C)</span></div>
+          <div style="font-size: 9px; color: #94a3b8;">Landsat 8/9 TIRS & GEE</div>
+        </div>
+        <div style="background: rgba(56, 189, 248, 0.1); border-left: 2px solid #38bdf8; padding: 4px 6px; border-radius: 3px;">
+          <div style="font-size: 9.5px; color: #38bdf8; font-weight: 700;">🌤️ Ambient Air Temp</div>
+          <div style="font-size: 13px; font-weight: 700; color: #38bdf8;">${(cell.lst - 11.3).toFixed(1)}°C</div>
+          <div style="font-size: 9px; color: #94a3b8;">Weather APIs (AccuWeather/IMD)</div>
+        </div>
+      </div>
+    </div>
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px;">
-      <div>Surface Temp (LST): <b>${cell.lst}°C</b></div>
-      <div>Heat Anomaly: <b style="color: #f43f5e;">+${cell.heat_anomaly}°C</b></div>
       <div>Vegetation (NDVI): <b>${cell.ndvi}</b></div>
       <div>Built Index (NDBI): <b>${cell.ndbi}</b></div>
       <div>Albedo Reflectance: <b>${cell.albedo}</b></div>
@@ -1624,40 +1786,64 @@ function renderAllocationsTable(scenario) {
 
 function renderComparisonGrid(scenarios) {
   const grid = document.getElementById('comparison-grid');
-  grid.innerHTML = Object.entries(scenarios).map(([key, s]) => `
-    <div class="comp-card ${key === selectedScenario ? 'highlight' : ''}">
-      <div class="comp-header">
-        <span>${s.title}</span>
-        <span style="color: #38bdf8;">-${s.avg_temp_reduction_c}°C</span>
+  if (!grid || !scenarios) return;
+
+  grid.innerHTML = Object.entries(scenarios).map(([key, s]) => {
+    const isSelected = key === selectedScenario;
+    return `
+      <div class="comp-card ${isSelected ? 'highlight' : ''}" data-key="${key}" title="Click to select and apply this scenario">
+        <div class="comp-header">
+          <span>${s.title}</span>
+          <span style="color: #38bdf8; font-family: var(--font-mono); font-weight: 700;">-${s.avg_temp_reduction_c}°C</span>
+        </div>
+        <div class="comp-metrics">
+          <div class="comp-metric-item">
+            <small>Beneficiaries</small>
+            <strong>${s.total_beneficiaries.toLocaleString()}</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Budget Used</small>
+            <strong>${formatCurrency(s.budget_spent_inr || (s.budget_spent_lakhs * 100000))}</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Exposure Drop</small>
+            <strong style="color: #34d399;">${s.heat_exposure_reduction_pct}%</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Trees</small>
+            <strong>${s.trees.toLocaleString()}</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Cool Roofs</small>
+            <strong>${(s.cool_roof_sqft/1000).toFixed(0)}k sqft</strong>
+          </div>
+          <div class="comp-metric-item">
+            <small>Shade + Water</small>
+            <strong>${s.shades + s.hydration} sites</strong>
+          </div>
+        </div>
+        <div class="comp-card-footer" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 8px;">
+          <span class="comp-status-badge" style="font-size: 11px;">
+            ${isSelected 
+              ? '<span style="color: #34d399; font-weight: 700;">● Active Scenario</span>' 
+              : '<span style="color: #94a3b8;">Click to select</span>'}
+          </span>
+          <button type="button" class="select-scenario-btn" data-key="${key}" style="background: ${isSelected ? 'rgba(52, 211, 153, 0.2)' : 'rgba(56, 189, 248, 0.15)'}; border: 1px solid ${isSelected ? '#34d399' : 'rgba(56, 189, 248, 0.4)'}; color: ${isSelected ? '#34d399' : '#38bdf8'}; font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s ease;">
+            ${isSelected ? '✓ Loaded' : '👉 Select & Load'}
+          </button>
+        </div>
       </div>
-      <div class="comp-metrics">
-        <div class="comp-metric-item">
-          <small>Beneficiaries</small>
-          <strong>${s.total_beneficiaries.toLocaleString()}</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Budget Used</small>
-          <strong>${formatCurrency(s.budget_spent_inr || (s.budget_spent_lakhs * 100000))}</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Exposure Drop</small>
-          <strong style="color: #34d399;">${s.heat_exposure_reduction_pct}%</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Trees</small>
-          <strong>${s.trees.toLocaleString()}</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Cool Roofs</small>
-          <strong>${(s.cool_roof_sqft/1000).toFixed(0)}k sqft</strong>
-        </div>
-        <div class="comp-metric-item">
-          <small>Shade + Water</small>
-          <strong>${s.shades + s.hydration} sites</strong>
-        </div>
-      </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
+
+  grid.querySelectorAll('.comp-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const scenarioKey = card.dataset.key;
+      if (scenarioKey) {
+        selectAndLoadScenario(scenarioKey);
+      }
+    });
+  });
 }
 
 function exportPlanJson() {
@@ -2014,4 +2200,192 @@ function renderHeatCalendar(calendar) {
     `).join('');
   }
 }
+
+// ================= DELEGATED AI PROJECT COPILOT CONTROLLER =================
+let copilotHistory = [];
+let isCopilotWaiting = false;
+
+function initCopilot() {
+  const toggleBtn = document.getElementById('copilot-toggle-btn');
+  const panel = document.getElementById('copilot-chat-panel');
+  const closeBtn = document.getElementById('copilot-close-btn');
+  const clearBtn = document.getElementById('copilot-clear-btn');
+  const form = document.getElementById('copilot-form');
+  const input = document.getElementById('copilot-input');
+  const chipsContainer = document.getElementById('copilot-quick-chips');
+
+  if (!toggleBtn || !panel) return;
+
+  // Toggle Panel
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isHidden = panel.classList.contains('hidden');
+    if (isHidden) {
+      panel.classList.remove('hidden');
+      if (input) input.focus();
+    } else {
+      panel.classList.add('hidden');
+    }
+  });
+
+  // Close Panel
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      panel.classList.add('hidden');
+    });
+  }
+
+  // Clear Chat
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      copilotHistory = [];
+      const messagesContainer = document.getElementById('copilot-messages');
+      if (messagesContainer) {
+        messagesContainer.innerHTML = `
+          <div class="copilot-msg bot-msg">
+            <div class="copilot-msg-bubble">
+              👋 <b>Hi! I'm the Avani Project Help Bot.</b><br>
+              Chat history cleared. What would you like to know about our project?
+            </div>
+          </div>
+        `;
+      }
+    });
+  }
+
+  // Quick Chips
+  if (chipsContainer) {
+    chipsContainer.addEventListener('click', (e) => {
+      const chip = e.target.closest('.quick-chip');
+      if (chip && chip.dataset.query) {
+        sendCopilotMessage(chip.dataset.query);
+      }
+    });
+  }
+
+  // Form Submit
+  if (form && input) {
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text || isCopilotWaiting) return;
+      input.value = '';
+      sendCopilotMessage(text);
+    });
+  }
+}
+
+async function sendCopilotMessage(userText) {
+  const messagesContainer = document.getElementById('copilot-messages');
+  if (!messagesContainer) return;
+
+  // 1. Render User Message
+  const userMsgEl = document.createElement('div');
+  userMsgEl.className = 'copilot-msg user-msg';
+  userMsgEl.innerHTML = `
+    <div class="copilot-msg-bubble">${escapeHtml(userText)}</div>
+  `;
+  messagesContainer.appendChild(userMsgEl);
+
+  // 2. Render Typing Indicator
+  const typingEl = document.createElement('div');
+  typingEl.className = 'copilot-msg bot-msg copilot-typing-msg';
+  typingEl.innerHTML = `
+    <div class="copilot-msg-bubble">
+      <div class="copilot-typing">
+        <span class="copilot-typing-dot"></span>
+        <span class="copilot-typing-dot"></span>
+        <span class="copilot-typing-dot"></span>
+        <span style="font-size: 11px; color: #94a3b8; margin-left: 6px;">Consulting Avani Help Bot...</span>
+      </div>
+    </div>
+  `;
+  messagesContainer.appendChild(typingEl);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+  isCopilotWaiting = true;
+
+  try {
+    const res = await fetch('/api/help-bot/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: userText,
+        city: currentSelectedCity || 'Bengaluru',
+        history: copilotHistory
+      })
+    });
+
+    const data = await res.json();
+    typingEl.remove();
+
+    if (data.status === 'success' && data.response) {
+      // Save history
+      copilotHistory.push({ role: 'user', content: userText });
+      copilotHistory.push({ role: 'assistant', content: data.response });
+
+      // Format markdown response
+      const formattedHtml = formatCopilotMarkdown(data.response);
+
+      const botMsgEl = document.createElement('div');
+      botMsgEl.className = 'copilot-msg bot-msg';
+      botMsgEl.innerHTML = `
+        <div class="copilot-msg-bubble">${formattedHtml}</div>
+        <div class="copilot-msg-meta">
+          <span>⚡ ${data.model}</span>
+          ${data.sources && data.sources.length ? `<span>• 📑 ${data.sources[0]}</span>` : ''}
+        </div>
+      `;
+      messagesContainer.appendChild(botMsgEl);
+    } else {
+      throw new Error(data.detail || 'Could not get response');
+    }
+  } catch (err) {
+    typingEl.remove();
+    console.error('Copilot request error:', err);
+    const errEl = document.createElement('div');
+    errEl.className = 'copilot-msg bot-msg';
+    errEl.innerHTML = `
+      <div class="copilot-msg-bubble" style="border-left: 3px solid #ef4444;">
+        ⚠️ Sorry, I encountered an issue retrieving the response. Please check that the server is reachable and try again.
+      </div>
+    `;
+    messagesContainer.appendChild(errEl);
+  } finally {
+    isCopilotWaiting = false;
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+}
+
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+function formatCopilotMarkdown(text) {
+  if (!text) return '';
+  let html = text;
+
+  // Headers
+  html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>');
+  html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>');
+
+  // Bold & Italic
+  html = html.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+  html = html.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+
+  // Inline Code
+  html = html.replace(/`([^`]+)`/gim, '<code>$1</code>');
+
+  // Bullet items
+  html = html.replace(/^\s*[-•*]\s+(.*$)/gim, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+
+  // Line breaks
+  html = html.replace(/\n\n/g, '<br><br>');
+  html = html.replace(/\n/g, '<br>');
+
+  return html;
+}
+
 

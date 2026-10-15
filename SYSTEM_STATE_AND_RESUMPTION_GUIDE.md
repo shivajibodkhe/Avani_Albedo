@@ -6,10 +6,18 @@
 
 ---
 
-## ⚡ 1. Quick-Start Guide (After System Restart)
+## ⚡ 1. How to Start the App Locally
 
-Once your machine boots back up and cools down, open your terminal and run these commands to resume:
+### 🚀 Option A: 1-Step Instant Launch (Recommended)
+```bash
+cd /Users/itsd-shivaji/Documents/Avani_Albedo_Dev
+./run.sh
+```
+*(This auto-activates `.venv`, checks dependencies, and launches the server with hot-reload.)*
 
+---
+
+### 🛠️ Option B: Step-by-Step Manual Launch
 ```bash
 # 1. Navigate to project root
 cd /Users/itsd-shivaji/Documents/Avani_Albedo_Dev
@@ -17,32 +25,53 @@ cd /Users/itsd-shivaji/Documents/Avani_Albedo_Dev
 # 2. Activate Python virtual environment
 source .venv/bin/activate
 
-# 3. Verify all test suites
+# 3. (Optional) Run test suite to verify health
 pytest -v
 
 # 4. Start the local server
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python run.py
+# (Or: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000)
 ```
 
-- **Web App URL:** [http://localhost:8000/](http://localhost:8000/)
-- **Swagger API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Admin Portal:** Click the **🔒 Admin Portal** button on top-right in the header, or log in with:
+---
+
+### 🌐 Access URLs
+- **Web App Dashboard:** [http://localhost:8000/](http://localhost:8000/)
+- **Swagger Interactive API Docs:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **API Status / Health Check:** [http://localhost:8000/api/status](http://localhost:8000/api/status)
+
+### 🔑 Demo & Admin Credentials
+- **Judge / Evaluator Login:**
+  - **Emails:** `srbodkhe@gmail.com`, `judge@hackathon.com`, `evaluator@ai-builder.cup`
+  - **Password:** `avani2026`
+- **Admin Portal Login** (Header top-right **🔒 Admin Portal**):
   - **Email:** `admin@avani.eco`
   - **Password:** `AdminPass123!`
+
+### 🛑 To Stop Server
+Press **`Ctrl + C`** in your terminal.
 
 ---
 
 ## 🧩 2. Complete Summary of What Has Been Built & Saved
 
-### A. Dual Temperature Sensor & AccuWeather Resolution (Completed)
-- **Problem Solved:** Explained the physical difference between **Satellite Radiometric Land Surface Temperature (LST / Skin Temp: ~42.8°C)** from Landsat 8/9 TIRS Band 10 and **2-Meter Shaded Ambient Air Temperature ($T_{\text{air}}$: ~31.5°C)** from AccuWeather/IMD.
-- **Interactive UI Toggle:** Added live switch in the **📈 Thermal Timeline & Forecast** tab:
-  - `[🛰️ Surface Skin LST (Peak Heat)]` → 42.8°C baseline with high solar absorption.
-  - `[🌤️ Ambient Air Temp (Weather App)]` → 31.5°C baseline matching AccuWeather, changing diurnal curves to cyan and scaling 7-day forecast cards.
-- **Dynamic City Switching Fix:**
-  - Fixed tab switching so selecting new cities (Bengaluru, Delhi, Phoenix, Dubai, London, Singapore) no longer kicks you out of the timeline tab.
-  - Reset `selectedWardId` properly on city changes.
-  - Dynamically redraws Chart.js diurnal curves for whichever city or ward is selected.
+### A. Dual Temperature Modes: Surface vs Ambient Air Temperature (Completed & Cross-Checked)
+- **1. Surface Temperature Mode:**
+  - **Source:** Landsat 8/9 Thermal Infrared Sensor (TIRS Band 10), Google Earth Engine (GEE).
+  - **Measures:** Land Surface Temperature (LST) — Heat absorbed by roads, roofs, and concrete under solar flux ($\sim 950\,\text{W/m}^2$).
+  - **Typical Example:** Bengaluru Surface Temperature: **~42.8°C** (hotspots like Peenya reaching 43.5°C+).
+- **2. Ambient Air Temperature Mode:**
+  - **Source:** Weather APIs (AccuWeather / IMD Ground Automatic Weather Stations).
+  - **Measures:** Human-experienced shaded air temperature recorded in a standard 2-meter Stevenson screen.
+  - **Typical Example:** Bengaluru Air Temperature: **~31.5°C**.
+- **Interactive UI Toggle & Dual Comparison Showcase:**
+  - Integrated into the **📈 Thermal Timeline & Forecast** tab with live toggle buttons:
+    - `[🛰️ Surface Temperature Mode]` (Orange theme, LST baseline)
+    - `[🌤️ Ambient Air Temperature Mode]` (Cyan theme, AccuWeather/IMD baseline)
+  - Live feature comparison cards highlighting Source, Measures, and Typical Example for both modes with click-to-switch capability.
+  - Dynamic Diurnal Chart (Chart.js) redraws seamlessly with corresponding curves, threshold lines, and 7-day forecast cards.
+  - Ward Inspector card displays both readings side-by-side: Surface LST vs Ambient Air Temp with $\Delta +11.3^\circ\text{C}$ thermal gap.
+  - Dual mode metadata exposed via API schema (`/api/temperature-timeline` returns `surface_mode` and `ambient_mode`).
 
 ### B. Cascading Geography & Multi-Currency Engine
 - **Cascading Geography:** `Country` (India, UAE, United States, United Kingdom, Singapore) $\rightarrow$ `State/Province` $\rightarrow$ `City` $\rightarrow$ `Ward/District`.
@@ -69,6 +98,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - **Land Feasibility Audit:** Root-zone physical bounding (16 m² per tree) ensures trees are only recommended on open parks, road medians, and schoolyards; excess cooling demand is rerouted to high-albedo cool roofs requiring zero ground soil.
 - **Spot Phase Evaluator:** Compares **Phase 1: Rapid Heat-Wave Relief**, **Phase 2: Systematic Resilience**, and **Phase 3: Long-Term Transformation** for any selected ward hotspot.
 - **12-Month Heat Calendar:** Precaution preparation windows (Jan–Feb), Peak heatwave emergency windows (Mar–May), and Sapling planting windows (Jul–Sep).
+
+### F. Avani Project Help Bot & Extensible Knowledge Base (Completed)
+- **Floating Help Bot Widget:** Prominent bottom-right corner button `🤖 Avani Help Bot` with animated sparkle badge, quick-question chips, and smooth chat window.
+- **App-Only Boundary Guardrail:** Responds strictly to questions about Avani Albedo application logic, algorithms, climate science, and architecture. Politely deflects off-topic queries.
+- **Strict Security Guardrail (Zero Credential Leakage):** Hardened against credential extraction; strictly refuses to share API keys, secrets, passwords, or tokens under all circumstances.
+- **Dedicated Future-Proof Knowledge Base:** Stored in [`app/data/help_bot_knowledge.json`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/app/data/help_bot_knowledge.json) so the team can continuously add and edit project topics and FAQs in standard JSON without modifying source code.
+- **API Endpoints:** `POST /api/help-bot/chat` (AI & fallback Q&A) and `GET /api/help-bot/knowledge` (knowledge inspection).
 
 ---
 

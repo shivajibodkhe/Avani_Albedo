@@ -229,23 +229,32 @@ Your application will be live at: `https://YOUR_PROJECT_ID.web.app`!
 
 ### Running Locally:
 ```bash
-# Option 1: Automated script
+# Option 1: Automated 1-step script (Recommended)
 ./run.sh
 
 # Option 2: Direct Python launch
 source .venv/bin/activate
 python run.py
 ```
-Visit:
+
+### Accessing the Local Services:
 - **UI Dashboard:** `http://localhost:8000`
 - **Swagger Documentation:** `http://localhost:8000/docs`
+- **API Status / Health Check:** `http://localhost:8000/api/status`
+
+### Demo & Admin Credentials:
+- **Judge / Demo Login:** Email `srbodkhe@gmail.com` / Password `avani2026`
+- **Admin Portal:** Email `admin@avani.eco` / Password `AdminPass123!`
 
 ### Running Automated Test Suite:
 ```bash
 source .venv/bin/activate
 pytest -v
 ```
-All 7 unit tests will execute in `< 1 second`.
+All 16 unit & integration tests will execute in `< 5 seconds`.
+
+### Stopping the Local Server:
+Press `Ctrl + C` in your terminal.
 
 ---
 

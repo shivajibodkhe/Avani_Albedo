@@ -14,7 +14,7 @@ from app.models.schemas import (
     ActionPlanResponse, SystemStatusResponse,
     LoginRequest, LoginResponse, TemperatureTimelineResponse,
     CityTimelapseResponse, SpotEvaluationSummary, HeatCalendarSummary,
-    TwentyYearArchiveResponse
+    TwentyYearArchiveResponse, CopilotChatRequest, CopilotChatResponse
 )
 from app.data.bengaluru_heat_data import get_bengaluru_climate_cells
 from app.data.cities_heat_data import (
@@ -34,6 +34,7 @@ from app.services.earth_engine_service import earth_engine_service
 from app.services.firestore_service import firestore_service
 from app.services.auth_service import auth_service
 from app.services.admin_service import admin_service
+from app.services.copilot_service import copilot_service
 
 # Logging setup
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -403,3 +404,32 @@ def update_admin_settings(payload: AdminSettingsPayload):
         "status": "success",
         "config": new_config
     }
+
+@app.post("/api/copilot/chat", response_model=CopilotChatResponse)
+@app.post("/api/help-bot/chat", response_model=CopilotChatResponse)
+def ask_project_copilot(payload: CopilotChatRequest):
+    """
+    Avani Project Help Bot powered by Gemini 2.5 Flash & Extensible JSON Knowledge Base.
+    Answers any query strictly related to the Avani Albedo application.
+    Enforces strict security guardrails: NEVER discloses passwords, credentials, or API keys.
+    """
+    admin_service.increment_metric("gemini_calls")
+    result = copilot_service.ask(
+        query=payload.message,
+        history=payload.history,
+        city=payload.city or "Bengaluru"
+    )
+    return CopilotChatResponse(
+        status="success",
+        response=result["response"],
+        model=result["model"],
+        sources=result.get("sources", [])
+    )
+
+@app.get("/api/help-bot/knowledge")
+def get_help_bot_knowledge_summary():
+    """
+    Returns the knowledge base topics and metadata from app/data/help_bot_knowledge.json.
+    Can be inspected and updated in future.
+    """
+    return copilot_service.knowledge

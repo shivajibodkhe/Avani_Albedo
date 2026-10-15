@@ -212,6 +212,15 @@ class DayForecast(BaseModel):
     mitigated_high_c: float
     alert_level: str
 
+class TemperatureModeInfo(BaseModel):
+    name: str
+    mode_id: str
+    source: str
+    measures: str
+    typical_example: str
+    sensor_platform: Optional[str] = None
+    typical_temp_c: Optional[float] = None
+
 class TemperatureTimelineResponse(BaseModel):
     city: str
     ward_id: Optional[str] = None
@@ -234,6 +243,8 @@ class TemperatureTimelineResponse(BaseModel):
     air_cooled_temp_c: Optional[List[float]] = None
     lst_vs_air_delta_c: Optional[float] = None
     season_note: Optional[str] = "Peak Summer Heatwave Baseline (April/May) vs 2m Ambient Air Temp"
+    surface_mode: Optional[TemperatureModeInfo] = None
+    ambient_mode: Optional[TemperatureModeInfo] = None
 
 class SystemStatusResponse(BaseModel):
     app_name: str
@@ -256,3 +267,15 @@ class LoginResponse(BaseModel):
     email: str
     role: str
     status: str = "success"
+
+class CopilotChatRequest(BaseModel):
+    message: str
+    city: Optional[str] = "Bengaluru"
+    history: Optional[List[Dict[str, str]]] = Field(default_factory=list)
+
+class CopilotChatResponse(BaseModel):
+    status: str = "success"
+    response: str
+    model: str
+    sources: List[str] = Field(default_factory=list)
+

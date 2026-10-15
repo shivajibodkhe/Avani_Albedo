@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 
 class Settings:
     APP_NAME: str = "Avani Albedo"
@@ -17,7 +17,7 @@ class Settings:
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
     
     # GCP
-    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "genai-2026")
+    GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "avani-albedo")
     GCP_REGION: str = os.getenv("GCP_REGION", "asia-south1")
     USE_EARTH_ENGINE_LIVE: bool = os.getenv("USE_EARTH_ENGINE_LIVE", "false").lower() in ("true", "1", "yes")
     
