@@ -212,7 +212,7 @@ GCP_PROJECT_ID: "${PROJECT_ID}"
 GCP_REGION: "${REGION}"
 APP_MODE: "live"
 AUTH_ENABLED: "true"
-ALLOWED_EMAILS: "shiv@webveer.com,srbodkhe@gmail.com"
+ALLOWED_EMAILS: "srbodkhe@gmail.com"
 DEFAULT_JUDGE_USER: "judges"
 EOF
 
@@ -252,5 +252,5 @@ echo -e "  📑 ${BOLD}Interactive Swagger API:${NC} ${CYAN}${LIVE_URL}/docs${NC
 echo -e "  🩺 ${BOLD}API Health Status:${NC}       ${GREEN}HTTP ${STATUS_CODE} (Healthy)${NC}"
 echo -e "  🛡️  ${BOLD}Cost Guardrail:${NC}          ${YELLOW}Scale-to-zero (0 idle instances), capped at max 2 instances${NC}"
 echo -e "  ⚖️  ${BOLD}Judges Login:${NC}            ${BOLD}UserName: judges | Password: AvaniAlbedo12042026#${NC}"
-echo -e "  👑 ${BOLD}Super Admins:${NC}            ${BOLD}shiv@webveer.com, srbodkhe@gmail.com${NC}"
+echo -e "  👑 ${BOLD}Super Admin:${NC}             ${BOLD}srbodkhe@gmail.com${NC}"
 echo -e "${BOLD}${GREEN}==============================================================================${NC}\n"

@@ -555,7 +555,7 @@ async function handleLoginSubmit(e) {
     });
 
     if (!res.ok) {
-      throw new Error("Invalid credentials or email not on whitelist");
+      throw new Error("Invalid credentials or unauthorized user");
     }
 
     const data = await res.json();
@@ -563,7 +563,7 @@ async function handleLoginSubmit(e) {
     localStorage.setItem('avani_email', data.email);
     showAuthenticatedUser(data.email);
   } catch (err) {
-    errorMsg.textContent = "Access Denied: Invalid credentials or email is not on the authorized whitelist.";
+    errorMsg.textContent = "Access Denied: Invalid credentials or account is not authorized.";
     errorMsg.classList.remove('hidden');
   } finally {
     submitBtn.disabled = false;
@@ -701,7 +701,7 @@ function renderAdminUsers(users) {
 
   tbody.innerHTML = users.map(u => {
     const statusClass = (u.status || 'active').toLowerCase();
-    const isSuperAdmin = u.email === 'srbodkhe@gmail.com' || u.email === 'shiv@webveer.com';
+    const isSuperAdmin = u.email === 'srbodkhe@gmail.com';
     return `
       <tr>
         <td><strong>${u.email}</strong> ${isSuperAdmin ? '👑 (Admin)' : ''}</td>
@@ -749,7 +749,7 @@ function renderAdminQuotas(quotas) {
 
 function populateAdminSettings(config) {
   document.getElementById('admin-gcp-project').value = config.gcp_project_id || 'avani-albedo';
-  document.getElementById('admin-allowed-emails').value = config.allowed_emails || 'shiv@webveer.com, srbodkhe@gmail.com';
+  document.getElementById('admin-allowed-emails').value = config.allowed_emails || 'srbodkhe@gmail.com';
   document.getElementById('admin-earth-engine-toggle').checked = !!config.use_earth_engine_live;
   
   const keyNote = document.getElementById('gemini-key-status-note');

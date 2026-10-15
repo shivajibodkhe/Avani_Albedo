@@ -73,9 +73,9 @@ def test_api_auth():
     assert res_verify.status_code == 200
     assert res_verify.json()["valid"] is True
 
-    # 3. Valid Login for super admin (shiv@webveer.com)
+    # 3. Valid Login for super admin (srbodkhe@gmail.com)
     res_admin = client.post("/api/auth/login", json={
-        "email": "shiv@webveer.com",
+        "email": "srbodkhe@gmail.com",
         "password": "AvaniAlbedo12042026#"
     })
     assert res_admin.status_code == 200

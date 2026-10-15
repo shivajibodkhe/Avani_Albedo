@@ -19,13 +19,13 @@ class AuthService:
 
     @property
     def allowed_emails(self) -> List[str]:
-        raw = os.getenv("ALLOWED_EMAILS", "shiv@webveer.com,srbodkhe@gmail.com")
+        raw = os.getenv("ALLOWED_EMAILS", "srbodkhe@gmail.com")
         return [e.strip().lower() for e in raw.split(",") if e.strip()]
 
     def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
         """
-        Authenticates a user against the judge password and allowed emails whitelist.
-        Supports username 'judges' and admin emails (shiv@webveer.com, srbodkhe@gmail.com).
+        Authenticates a user against the judge password and allowed emails.
+        Supports username 'judges' and admin email (srbodkhe@gmail.com).
         """
         clean_id = email.strip().lower()
         clean_pw = password.strip()
@@ -35,14 +35,14 @@ class AuthService:
             return None
             
         # Role determination
-        if clean_id in ("shiv@webveer.com", "srbodkhe@gmail.com"):
+        if clean_id == "srbodkhe@gmail.com":
             role = "Super Admin"
             display_name = clean_id
         elif clean_id in ("judges", "judge", "judges@avani.eco"):
             role = "Judge / Evaluator"
             display_name = "judges"
         elif clean_id in self.allowed_emails:
-            role = "Super Admin" if clean_id in ("shiv@webveer.com", "srbodkhe@gmail.com") else "Municipal Planner"
+            role = "Super Admin" if clean_id == "srbodkhe@gmail.com" else "Municipal Planner"
             display_name = clean_id
         else:
             return None

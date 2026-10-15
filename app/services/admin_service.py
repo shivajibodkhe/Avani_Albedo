@@ -10,15 +10,6 @@ class AdminService:
     def __init__(self):
         # 1. Registered Users Store
         self._users: Dict[str, Dict[str, Any]] = {
-            "shiv@webveer.com": {
-                "email": "shiv@webveer.com",
-                "role": "Super Admin",
-                "status": "Active",
-                "created_at": time.time() - 86400 * 5,
-                "last_active": time.time(),
-                "provider": "google/admin",
-                "login_count": 28
-            },
             "srbodkhe@gmail.com": {
                 "email": "srbodkhe@gmail.com",
                 "role": "Super Admin",
@@ -26,7 +17,7 @@ class AdminService:
                 "created_at": time.time() - 86400 * 5,
                 "last_active": time.time(),
                 "provider": "google/admin",
-                "login_count": 24
+                "login_count": 28
             },
             "judges": {
                 "email": "judges",
@@ -102,8 +93,8 @@ class AdminService:
 
     def delete_user(self, email: str) -> bool:
         clean = email.strip().lower()
-        if clean in ("srbodkhe@gmail.com", "shiv@webveer.com"):
-            return False # Protect super admins
+        if clean == "srbodkhe@gmail.com":
+            return False # Protect super admin
         if clean in self._users:
             del self._users[clean]
             return True
@@ -185,8 +176,8 @@ class AdminService:
             "gcp_region": settings.GCP_REGION,
             "use_earth_engine_live": settings.USE_EARTH_ENGINE_LIVE,
             "app_mode": settings.APP_MODE,
-            "allowed_emails": os.getenv("ALLOWED_EMAILS", "shiv@webveer.com,srbodkhe@gmail.com"),
-            "admin_email": "shiv@webveer.com, srbodkhe@gmail.com"
+            "allowed_emails": os.getenv("ALLOWED_EMAILS", "srbodkhe@gmail.com"),
+            "admin_email": "srbodkhe@gmail.com"
         }
 
     def update_runtime_config(self, updates: Dict[str, Any]) -> Dict[str, Any]:

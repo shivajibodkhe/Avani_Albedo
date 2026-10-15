@@ -281,12 +281,12 @@ def verify_auth_token(authorization: Optional[str] = Header(None)):
 
 @app.post("/api/auth/login", response_model=LoginResponse)
 def login_user(payload: LoginRequest):
-    """Authenticates judges or whitelisted users against the access policy."""
+    """Authenticates judges or authorized administrative users against the access policy."""
     auth_result = auth_service.authenticate_user(payload.email, payload.password)
     if not auth_result:
         raise HTTPException(
             status_code=401,
-            detail="Access Denied: Invalid credentials or email is not on the authorized whitelist."
+            detail="Access Denied: Invalid credentials or account is not authorized."
         )
     return LoginResponse(
         token=auth_result["token"],
@@ -335,11 +335,11 @@ def firebase_login_user(payload: FirebaseLoginPayload):
     if not user:
         admin_service.trigger_registration_alert(
             email=email,
-            details=f"Firebase login attempted by {payload.displayName or email}. Not yet registered on whitelist."
+            details=f"Google login attempted by {payload.displayName or email}. Not in authorized administrator list."
         )
         raise HTTPException(
             status_code=403,
-            detail=f"Access Request Sent: Your Google/Firebase ID ({email}) is not yet registered. An alert has been sent to Super Admins (shiv@webveer.com, srbodkhe@gmail.com). You will receive access once approved."
+            detail=f"Access Request Sent: Your Google/Firebase ID ({email}) is not yet registered. An alert has been sent to Administrator (srbodkhe@gmail.com). You will receive access once approved."
         )
         
     # 2. Suspended user
@@ -423,7 +423,7 @@ def resolve_admin_alert(payload: AdminAlertResolvePayload):
 
 @app.post("/api/admin/settings")
 def update_admin_settings(payload: AdminSettingsPayload):
-    """Updates runtime API keys, project configuration, and whitelists."""
+    """Updates runtime API keys, project configuration, and access controls."""
     updates = {}
     if payload.gemini_api_key is not None:
         updates["gemini_api_key"] = payload.gemini_api_key
