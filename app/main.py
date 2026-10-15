@@ -3,7 +3,7 @@ import time
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -252,12 +252,31 @@ def compare_all_scenarios(
 
 @app.get("/api/auth/config")
 def get_auth_config():
-    """Returns auth requirement status and demo credentials hint."""
+    """Returns auth requirement status and allowed accounts."""
     return {
         "auth_enabled": auth_service.is_auth_enabled,
         "allowed_emails": auth_service.allowed_emails,
-        "default_judge_email": "judges",
-        "default_judge_password": auth_service.judge_password
+        "default_judge_email": "judges"
+    }
+
+@app.get("/api/auth/verify")
+def verify_auth_token(authorization: Optional[str] = Header(None)):
+    """Validates that a token is currently active and not expired."""
+    if not auth_service.is_auth_enabled:
+        return {"valid": True, "email": "guest@avani.eco", "role": "Municipal Planner"}
+        
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authentication token required.")
+        
+    token = authorization.split("Bearer ", 1)[1].strip()
+    session = auth_service.verify_token(token)
+    if not session:
+        raise HTTPException(status_code=401, detail="Invalid or expired session. Please log in.")
+        
+    return {
+        "valid": True,
+        "email": session["email"],
+        "role": session["role"]
     }
 
 @app.post("/api/auth/login", response_model=LoginResponse)

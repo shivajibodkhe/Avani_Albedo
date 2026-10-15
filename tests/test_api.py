@@ -66,6 +66,12 @@ def test_api_auth():
     assert data["status"] == "success"
     assert data["role"] == "Judge / Evaluator"
     assert "token" in data
+    token = data["token"]
+
+    # Verify active token
+    res_verify = client.get("/api/auth/verify", headers={"Authorization": f"Bearer {token}"})
+    assert res_verify.status_code == 200
+    assert res_verify.json()["valid"] is True
 
     # 3. Valid Login for super admin (shiv@webveer.com)
     res_admin = client.post("/api/auth/login", json={

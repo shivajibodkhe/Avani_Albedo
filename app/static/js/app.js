@@ -245,12 +245,9 @@ function initEventHandlers() {
   // Export JSON
   document.getElementById('export-json-btn').addEventListener('click', exportPlanJson);
 
-  // Auth Form & Quick Judge Handlers
+  // Auth Form & Handlers
   const loginForm = document.getElementById('login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
-
-  const quickJudgeBtn = document.getElementById('quick-judge-btn');
-  if (quickJudgeBtn) quickJudgeBtn.addEventListener('click', handleQuickJudgeLogin);
 
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
@@ -454,25 +451,38 @@ function selectAndLoadScenario(scenarioKey) {
 let cachedAuthConfig = null;
 
 async function initAuth() {
+  const overlay = document.getElementById('login-modal-overlay');
   try {
     const res = await fetch('/api/auth/config');
     cachedAuthConfig = await res.json();
     
     if (!cachedAuthConfig.auth_enabled) {
-      document.getElementById('login-modal-overlay').classList.add('hidden');
+      if (overlay) overlay.classList.add('hidden');
       return;
     }
 
     const token = localStorage.getItem('avani_token');
-    const userEmail = localStorage.getItem('avani_email');
+    if (!token) {
+      if (overlay) overlay.classList.remove('hidden');
+      return;
+    }
+
+    // Verify token with backend
+    const verifyRes = await fetch('/api/auth/verify', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     
-    if (token && userEmail) {
-      showAuthenticatedUser(userEmail);
+    if (verifyRes.ok) {
+      const data = await verifyRes.json();
+      showAuthenticatedUser(data.email);
     } else {
-      document.getElementById('login-modal-overlay').classList.remove('hidden');
+      localStorage.removeItem('avani_token');
+      localStorage.removeItem('avani_email');
+      if (overlay) overlay.classList.remove('hidden');
     }
   } catch (err) {
-    console.warn("Auth config check error:", err);
+    console.warn("Auth verification error:", err);
+    if (overlay) overlay.classList.remove('hidden');
   }
 }
 
@@ -565,15 +575,7 @@ async function handleFirebaseGoogleLogin() {
   }
 }
 
-function handleQuickJudgeLogin() {
-  const defaultEmail = (cachedAuthConfig && cachedAuthConfig.default_judge_email) || "judges";
-  const defaultPw = (cachedAuthConfig && cachedAuthConfig.default_judge_password) || "AvaniAlbedo12042026#";
-  
-  document.getElementById('login-email').value = defaultEmail;
-  document.getElementById('login-password').value = defaultPw;
-  
-  document.getElementById('login-form').dispatchEvent(new Event('submit'));
-}
+
 
 function handleLogout() {
   localStorage.removeItem('avani_token');
