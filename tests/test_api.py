@@ -54,31 +54,52 @@ def test_api_auth():
     assert res_cfg.status_code == 200
     cfg = res_cfg.json()
     assert "auth_enabled" in cfg
-    assert "default_judge_email" in cfg
+    assert cfg["default_judge_email"] == "judges"
 
     # 2. Valid Login for judge
     res_valid = client.post("/api/auth/login", json={
-        "email": "judge@hackathon.com",
-        "password": "avani2026"
+        "email": "judges",
+        "password": "AvaniAlbedo12042026#"
     })
     assert res_valid.status_code == 200
     data = res_valid.json()
     assert data["status"] == "success"
+    assert data["role"] == "Judge / Evaluator"
     assert "token" in data
 
-    # 3. Invalid Login (wrong password)
+    # 3. Valid Login for super admin (shiv@webveer.com)
+    res_admin = client.post("/api/auth/login", json={
+        "email": "shiv@webveer.com",
+        "password": "AvaniAlbedo12042026#"
+    })
+    assert res_admin.status_code == 200
+    assert res_admin.json()["role"] == "Super Admin"
+
+    # 4. Invalid Login (wrong password)
     res_invalid_pw = client.post("/api/auth/login", json={
-        "email": "judge@hackathon.com",
+        "email": "judges",
         "password": "wrongpassword"
     })
     assert res_invalid_pw.status_code == 401
 
-    # 4. Invalid Login (unauthorized email)
+    # 5. Invalid Login (unauthorized email)
     res_invalid_email = client.post("/api/auth/login", json={
         "email": "intruder@stranger.org",
-        "password": "avani2026"
+        "password": "AvaniAlbedo12042026#"
     })
     assert res_invalid_email.status_code == 401
+
+    # 6. Admin can reset password
+    res_reset = client.post("/api/admin/users/reset-password", json={
+        "email": "judges",
+        "new_password": "NewSecret2026#"
+    })
+    assert res_reset.status_code == 200
+    # Revert back to original
+    client.post("/api/admin/users/reset-password", json={
+        "email": "judges",
+        "new_password": "AvaniAlbedo12042026#"
+    })
 
 def test_firebase_auth_and_admin_portal():
     # 1. Unregistered user attempts Firebase login -> Triggers 403 & Admin Alert

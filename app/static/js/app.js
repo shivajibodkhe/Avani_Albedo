@@ -566,8 +566,8 @@ async function handleFirebaseGoogleLogin() {
 }
 
 function handleQuickJudgeLogin() {
-  const defaultEmail = (cachedAuthConfig && cachedAuthConfig.default_judge_email) || "judge@hackathon.com";
-  const defaultPw = (cachedAuthConfig && cachedAuthConfig.default_judge_password) || "avani2026";
+  const defaultEmail = (cachedAuthConfig && cachedAuthConfig.default_judge_email) || "judges";
+  const defaultPw = (cachedAuthConfig && cachedAuthConfig.default_judge_password) || "AvaniAlbedo12042026#";
   
   document.getElementById('login-email').value = defaultEmail;
   document.getElementById('login-password').value = defaultPw;
@@ -666,15 +666,16 @@ function renderAdminUsers(users) {
 
   tbody.innerHTML = users.map(u => {
     const statusClass = (u.status || 'active').toLowerCase();
-    const isSuperAdmin = u.email === 'srbodkhe@gmail.com';
+    const isSuperAdmin = u.email === 'srbodkhe@gmail.com' || u.email === 'shiv@webveer.com';
     return `
       <tr>
-        <td><strong>${u.email}</strong> ${isSuperAdmin ? '👑' : ''}</td>
+        <td><strong>${u.email}</strong> ${isSuperAdmin ? '👑 (Admin)' : ''}</td>
         <td>${u.role}</td>
         <td><span class="user-status-badge ${statusClass}">${u.status}</span></td>
         <td><code>${u.provider || 'direct'}</code></td>
         <td>${u.login_count || 1}</td>
         <td>
+          <button class="table-btn" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; margin-right: 4px;" onclick="promptResetPassword('${u.email}')">Reset Password</button>
           ${isSuperAdmin ? '<span style="color: var(--text-dim); font-size: 11px;">Protected</span>' : `
             ${u.status === 'Active' ? `
               <button class="table-btn suspend" onclick="performAdminUserAction('${u.email}', 'suspend')">Suspend</button>
@@ -712,8 +713,8 @@ function renderAdminQuotas(quotas) {
 }
 
 function populateAdminSettings(config) {
-  document.getElementById('admin-gcp-project').value = config.gcp_project_id || 'genai-2026';
-  document.getElementById('admin-allowed-emails').value = config.allowed_emails || 'srbodkhe@gmail.com, judge@hackathon.com';
+  document.getElementById('admin-gcp-project').value = config.gcp_project_id || 'avani-albedo';
+  document.getElementById('admin-allowed-emails').value = config.allowed_emails || 'shiv@webveer.com, srbodkhe@gmail.com';
   document.getElementById('admin-earth-engine-toggle').checked = !!config.use_earth_engine_live;
   
   const keyNote = document.getElementById('gemini-key-status-note');
@@ -754,6 +755,24 @@ async function handleSaveAdminSettings(e) {
 }
 
 // Global actions exposed for inline table onclick
+window.promptResetPassword = async function(email) {
+  const newPw = prompt(`🔑 Reset Password for ${email}:\n\nEnter new password:`, "AvaniAlbedo12042026#");
+  if (!newPw) return;
+  try {
+    const res = await fetch('/api/admin/users/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, new_password: newPw })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Failed to reset password");
+    alert(`✅ Password for ${email} successfully updated!`);
+    loadAdminDashboard();
+  } catch (err) {
+    alert(`❌ Error resetting password: ${err.message}`);
+  }
+};
+
 window.performAdminUserAction = async function(email, action) {
   try {
     const res = await fetch('/api/admin/users/action', {

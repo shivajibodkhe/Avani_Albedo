@@ -256,7 +256,7 @@ def get_auth_config():
     return {
         "auth_enabled": auth_service.is_auth_enabled,
         "allowed_emails": auth_service.allowed_emails,
-        "default_judge_email": "judge@hackathon.com",
+        "default_judge_email": "judges",
         "default_judge_password": auth_service.judge_password
     }
 
@@ -285,6 +285,10 @@ class FirebaseLoginPayload(BaseModel):
 class AdminUserActionPayload(BaseModel):
     email: str
     action: str  # "approve", "suspend", "activate", "delete"
+
+class AdminPasswordResetPayload(BaseModel):
+    email: str
+    new_password: str
 
 class AdminAlertResolvePayload(BaseModel):
     alert_id: str
@@ -316,7 +320,7 @@ def firebase_login_user(payload: FirebaseLoginPayload):
         )
         raise HTTPException(
             status_code=403,
-            detail=f"Access Request Sent: Your Google/Firebase ID ({email}) is not yet registered. An alert has been sent to Super Admin (srbodkhe@gmail.com). You will receive access once approved."
+            detail=f"Access Request Sent: Your Google/Firebase ID ({email}) is not yet registered. An alert has been sent to Super Admins (shiv@webveer.com, srbodkhe@gmail.com). You will receive access once approved."
         )
         
     # 2. Suspended user
@@ -371,6 +375,18 @@ def perform_admin_user_action(payload: AdminUserActionPayload):
         
     return {
         "status": "success",
+        "users": admin_service.list_users()
+    }
+
+@app.post("/api/admin/users/reset-password")
+def reset_user_password(payload: AdminPasswordResetPayload):
+    """Admin action to reset user or judges password."""
+    success = admin_service.reset_user_password(payload.email, payload.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Password reset could not be completed.")
+    return {
+        "status": "success",
+        "message": f"Password for {payload.email} has been reset successfully.",
         "users": admin_service.list_users()
     }
 

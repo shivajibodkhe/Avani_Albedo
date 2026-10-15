@@ -172,14 +172,19 @@ fi
 
 # Judge Password Secret
 echo -e "  • Ensuring JUDGE_PASSWORD secret exists in Secret Manager..."
-if ! gcloud secrets describe JUDGE_PASSWORD --project="${PROJECT_ID}" &>/dev/null; then
-    echo -n "avani2026" | gcloud secrets create JUDGE_PASSWORD \
+if gcloud secrets describe JUDGE_PASSWORD --project="${PROJECT_ID}" &>/dev/null; then
+    echo -n "AvaniAlbedo12042026#" | gcloud secrets versions add JUDGE_PASSWORD \
+        --data-file=- \
+        --project="${PROJECT_ID}" \
+        --quiet
+else
+    echo -n "AvaniAlbedo12042026#" | gcloud secrets create JUDGE_PASSWORD \
         --data-file=- \
         --replication-policy="automatic" \
         --project="${PROJECT_ID}" \
         --quiet
 fi
-echo -e "${GREEN}  ✓ JUDGE_PASSWORD secret secured.${NC}"
+echo -e "${GREEN}  ✓ JUDGE_PASSWORD secret secured (AvaniAlbedo12042026#).${NC}"
 
 # Grant Secret Accessor role to Compute service account
 echo -e "  • Granting Secret Accessor IAM role to Cloud Run service account..."
@@ -200,6 +205,17 @@ if gcloud secrets describe GEMINI_API_KEY --project="${PROJECT_ID}" &>/dev/null;
     SECRETS_PARAM="GEMINI_API_KEY=GEMINI_API_KEY:latest,JUDGE_PASSWORD=JUDGE_PASSWORD:latest"
 fi
 
+# Create clean env-vars-file to avoid shell / comma dict parsing issues
+ENV_FILE=$(mktemp)
+cat <<EOF > "${ENV_FILE}"
+GCP_PROJECT_ID: "${PROJECT_ID}"
+GCP_REGION: "${REGION}"
+APP_MODE: "live"
+AUTH_ENABLED: "true"
+ALLOWED_EMAILS: "shiv@webveer.com,srbodkhe@gmail.com"
+DEFAULT_JUDGE_USER: "judges"
+EOF
+
 gcloud run deploy "${SERVICE_NAME}" \
     --source . \
     --project="${PROJECT_ID}" \
@@ -211,9 +227,11 @@ gcloud run deploy "${SERVICE_NAME}" \
     --memory=1Gi \
     --cpu=1 \
     --port=8000 \
-    --set-env-vars="GCP_PROJECT_ID=${PROJECT_ID},GCP_REGION=${REGION},APP_MODE=live,AUTH_ENABLED=true,ALLOWED_EMAILS=srbodkhe@gmail.com,judge@hackathon.com,evaluator@ai-builder.cup" \
+    --env-vars-file="${ENV_FILE}" \
     --set-secrets="${SECRETS_PARAM}" \
     --quiet
+
+rm -f "${ENV_FILE}"
 
 # Retrieve Live URL
 LIVE_URL=$(gcloud run services describe "${SERVICE_NAME}" \
@@ -233,5 +251,6 @@ echo -e "  🌐 ${BOLD}Live Application URL:${NC}    ${MAGENTA}${LIVE_URL}${NC}"
 echo -e "  📑 ${BOLD}Interactive Swagger API:${NC} ${CYAN}${LIVE_URL}/docs${NC}"
 echo -e "  🩺 ${BOLD}API Health Status:${NC}       ${GREEN}HTTP ${STATUS_CODE} (Healthy)${NC}"
 echo -e "  🛡️  ${BOLD}Cost Guardrail:${NC}          ${YELLOW}Scale-to-zero (0 idle instances), capped at max 2 instances${NC}"
-echo -e "  🔒 ${BOLD}Default Judge Login:${NC}     ${BOLD}judge@hackathon.com / avani2026${NC}"
+echo -e "  ⚖️  ${BOLD}Judges Login:${NC}            ${BOLD}UserName: judges | Password: AvaniAlbedo12042026#${NC}"
+echo -e "  👑 ${BOLD}Super Admins:${NC}            ${BOLD}shiv@webveer.com, srbodkhe@gmail.com${NC}"
 echo -e "${BOLD}${GREEN}==============================================================================${NC}\n"

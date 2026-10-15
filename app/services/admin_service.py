@@ -10,37 +10,37 @@ class AdminService:
     def __init__(self):
         # 1. Registered Users Store
         self._users: Dict[str, Dict[str, Any]] = {
+            "shiv@webveer.com": {
+                "email": "shiv@webveer.com",
+                "role": "Super Admin",
+                "status": "Active",
+                "created_at": time.time() - 86400 * 5,
+                "last_active": time.time(),
+                "provider": "google/admin",
+                "login_count": 28
+            },
             "srbodkhe@gmail.com": {
                 "email": "srbodkhe@gmail.com",
                 "role": "Super Admin",
-                "status": "Active", # Active, Suspended, Pending
+                "status": "Active",
                 "created_at": time.time() - 86400 * 5,
                 "last_active": time.time(),
-                "provider": "firebase/google",
+                "provider": "google/admin",
                 "login_count": 24
             },
-            "judge@hackathon.com": {
-                "email": "judge@hackathon.com",
+            "judges": {
+                "email": "judges",
                 "role": "Judge / Evaluator",
                 "status": "Active",
                 "created_at": time.time() - 86400 * 2,
                 "last_active": time.time() - 3600,
-                "provider": "judge_demo",
-                "login_count": 8
+                "provider": "credentials",
+                "login_count": 12
             }
         }
 
         # 2. Alerts / Registration Requests Store
-        self._alerts: List[Dict[str, Any]] = [
-            {
-                "id": "alert_sample_1",
-                "user_email": "evaluator.ai.cup@gmail.com",
-                "type": "New Registration Request",
-                "timestamp": time.time() - 1800,
-                "status": "pending", # pending, approved, rejected
-                "message": "Unregistered user attempted login via Firebase Google Sign-In. Awaiting admin approval."
-            }
-        ]
+        self._alerts: List[Dict[str, Any]] = []
 
         # 3. API Quotas & Usage Tracking
         self._quotas: Dict[str, Any] = {
@@ -102,12 +102,33 @@ class AdminService:
 
     def delete_user(self, email: str) -> bool:
         clean = email.strip().lower()
-        if clean == "srbodkhe@gmail.com":
-            return False # Protect super admin
+        if clean in ("srbodkhe@gmail.com", "shiv@webveer.com"):
+            return False # Protect super admins
         if clean in self._users:
             del self._users[clean]
             return True
         return False
+
+    def reset_user_password(self, email: str, new_password: str) -> bool:
+        """Allows super admins to reset the password for judges or any user."""
+        clean = email.strip().lower()
+        clean_pw = new_password.strip()
+        if not clean_pw:
+            return False
+            
+        if clean in ("judges", "judge", "judges@avani.eco"):
+            os.environ["JUDGE_PASSWORD"] = clean_pw
+            logger.info("Admin reset password for judges account")
+            return True
+            
+        if clean in self._users:
+            self._users[clean]["password"] = clean_pw
+            logger.info(f"Admin reset password for user {clean}")
+            return True
+            
+        # Also allow resetting default judge password if requested
+        os.environ["JUDGE_PASSWORD"] = clean_pw
+        return True
 
     # ================= ALERTS & REGISTRATION NOTIFICATIONS =================
     def list_alerts(self) -> List[Dict[str, Any]]:
@@ -164,8 +185,8 @@ class AdminService:
             "gcp_region": settings.GCP_REGION,
             "use_earth_engine_live": settings.USE_EARTH_ENGINE_LIVE,
             "app_mode": settings.APP_MODE,
-            "allowed_emails": os.getenv("ALLOWED_EMAILS", "srbodkhe@gmail.com,judge@hackathon.com"),
-            "admin_email": "srbodkhe@gmail.com"
+            "allowed_emails": os.getenv("ALLOWED_EMAILS", "shiv@webveer.com,srbodkhe@gmail.com"),
+            "admin_email": "shiv@webveer.com, srbodkhe@gmail.com"
         }
 
     def update_runtime_config(self, updates: Dict[str, Any]) -> Dict[str, Any]:
