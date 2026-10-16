@@ -46,6 +46,37 @@ Exportable Climate Action Plan (PDF / JSON / Printable Briefing)
 
 ---
 
+## 📚 Project Documentation Hub
+All project blueprints, deployment manuals, and hackathon collateral are neatly organized in the [`docs/`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/docs) directory:
+- 🏛️ **Architecture:** [`docs/architecture/Avani_Albedo_Architecture_Blueprint.md`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/docs/architecture/Avani_Albedo_Architecture_Blueprint.md)
+- ☁️ **GCP Setup & Hosting:** [`docs/gcp/GCP_SETUP_AND_DEVELOPER_GUIDE.md`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/docs/gcp/GCP_SETUP_AND_DEVELOPER_GUIDE.md) & [`docs/gcp/PAID_GCP_HOSTING_AND_INFRA_GUIDE.md`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/docs/gcp/PAID_GCP_HOSTING_AND_INFRA_GUIDE.md)
+- 🧭 **System State & Resumption:** [`docs/gcp/SYSTEM_STATE_AND_RESUMPTION_GUIDE.md`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/docs/gcp/SYSTEM_STATE_AND_RESUMPTION_GUIDE.md)
+- 🔑 **Cloud Infrastructure Details:** [`docs/gcp/my_gcp_details.md`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/docs/gcp/my_gcp_details.md)
+- 🏆 **Hackathon Submission:** [`docs/hackathon/HACKATHON_SUBMISSION_SUMMARY.md`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/docs/hackathon/HACKATHON_SUBMISSION_SUMMARY.md)
+
+---
+
+## 💰 Zero-Cost Cloud Data Architecture (Local Staging ➔ GCS ➔ BigQuery)
+
+```text
+1. High-Fidelity Data Extraction (ECMWF ERA5 / NASA Landsat 8-9 / Sentinel-2)
+                          │
+                          ▼
+2. Local JSONL Staging (data/json_staging/*.jsonl) [COST: $0.00]
+                          │
+                          ▼ (gcloud storage cp)
+3. Google Cloud Storage Bucket (gs://avani-albedo-climate-staging/) [COST: < $0.01/mo]
+                          │
+                          ▼ (bq load --source_format=NEWLINE_DELIMITED_JSON)
+4. BigQuery Enterprise Dataset (avani-albedo.avani_climate) [INGESTION COST: $0.00 FREE!]
+```
+
+> [!TIP]
+> **Why this saves significant cloud costs:**
+> Google BigQuery streaming insert API calls (`tabledata.insertAll`) incur continuous per-request API costs and \$0.05 per GB streaming fees. In contrast, **BigQuery batch loads from Cloud Storage (`bq load`) are 100% FREE of ingestion charges** on Google Cloud, while Cloud Storage storage costs mere pennies.
+
+---
+
 ## 🚀 How to Start the App Locally
 
 ### Quick Start (1 Step)
@@ -54,6 +85,13 @@ Exportable Climate Action Plan (PDF / JSON / Printable Briefing)
 ./run.sh
 ```
 *(This automatically detects or creates `.venv`, installs dependencies, and boots the FastAPI server with live reload.)*
+
+### Data Management Shortcuts
+```bash
+./run.sh --stage-data    # Refresh all 8 real datasets into data/json_staging/ ($0.00 cost)
+./run.sh --push-bq       # Batch upload to GCS and load into BigQuery ($0.00 ingestion cost)
+./run.sh --open          # Start local dev server and open in browser
+```
 
 ---
 

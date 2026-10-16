@@ -15,6 +15,8 @@ DEFAULT_PORT=8000
 DEFAULT_HOST="127.0.0.1"
 AUTO_OPEN=false
 FORCE_INSTALL=false
+STAGE_DATA=false
+PUSH_BQ=false
 
 # ANSI Color codes
 BOLD="\033[1m"
@@ -36,11 +38,14 @@ show_help() {
     echo -e "  ${CYAN}-h, --host <ip>${NC}        Set server host (default: 127.0.0.1)"
     echo -e "  ${CYAN}-o, --open${NC}             Automatically open the web dashboard in your browser"
     echo -e "  ${CYAN}-i, --install${NC}          Force re-installation of dependencies from requirements.txt"
+    echo -e "  ${CYAN}--stage-data${NC}           Stage 100% verified climate data locally to data/json_staging/"
+    echo -e "  ${CYAN}--push-bq${NC}              Upload staged JSONL to GCS and run free BigQuery batch load"
     echo -e "  ${CYAN}--help${NC}                 Show this help message and exit\n"
     echo -e "${BOLD}Examples:${NC}"
     echo -e "  ./start_local.sh"
     echo -e "  ./start_local.sh --open"
-    echo -e "  ./start_local.sh --port 8080 --open"
+    echo -e "  ./start_local.sh --stage-data"
+    echo -e "  ./start_local.sh --push-bq"
     exit 0
 }
 
@@ -61,6 +66,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         -i|--install)
             FORCE_INSTALL=true
+            shift
+            ;;
+        --stage-data)
+            STAGE_DATA=true
+            shift
+            ;;
+        --push-bq)
+            PUSH_BQ=true
             shift
             ;;
         --help)
@@ -150,6 +163,21 @@ else
     fi
 fi
 
+# Optional action: Stage local climate data
+if [ "$STAGE_DATA" = true ]; then
+    echo -e "\n${BOLD}${CYAN}📁 Staging real climate & satellite telemetry locally...${NC}"
+    python scripts/stage_all_climate_data_locally.py
+    echo -e "${GREEN}✓ Local data staging complete. Files located in data/json_staging/${NC}"
+    exit 0
+fi
+
+# Optional action: Push staging to GCS and BigQuery
+if [ "$PUSH_BQ" = true ]; then
+    echo -e "\n${BOLD}${CYAN}☁️  Uploading staged data to GCS & batch loading to BigQuery...${NC}"
+    ./scripts/push_staging_to_gcs_and_bq.sh
+    exit 0
+fi
+
 # 4. Check if the designated port is already occupied
 if lsof -i :"$PORT" &>/dev/null; then
     OCCUPIER=$(lsof -ti :"$PORT" | tr '\n' ' ')
@@ -172,10 +200,13 @@ URL="http://${HOST}:${PORT}"
 
 echo -e "\n${BOLD}${GREEN}🚀 Starting Local Development Server...${NC}"
 echo -e "${CYAN}------------------------------------------------------------------------------${NC}"
-echo -e "  💻 ${BOLD}Web Dashboard:${NC}    ${MAGENTA}${LOCAL_URL}${NC}"
-echo -e "  📑 ${BOLD}API Swagger Docs:${NC} ${MAGENTA}${LOCAL_URL}/docs${NC}"
-echo -e "  🩺 ${BOLD}Health Check API:${NC} ${MAGENTA}${LOCAL_URL}/api/status${NC}"
-echo -e "  🔄 ${BOLD}Live Reload:${NC}      ${GREEN}Enabled (Auto-reloads on file change)${NC}"
+echo -e "  💻 ${BOLD}Web Dashboard:${NC}      ${MAGENTA}${LOCAL_URL}${NC}"
+echo -e "  📑 ${BOLD}Secure API Docs:${NC}    ${MAGENTA}${LOCAL_URL}/docs${NC} (Protected with Auth)"
+echo -e "  🩺 ${BOLD}Health Check API:${NC}   ${MAGENTA}${LOCAL_URL}/api/status${NC}"
+echo -e "  ☁️  ${BOLD}Cloud Storage:${NC}      ${CYAN}gs://avani-albedo-climate-staging${NC}"
+echo -e "  📊 ${BOLD}BigQuery Sink:${NC}      ${CYAN}avani-albedo:avani_climate (8 Tables)${NC}"
+echo -e "  📁 ${BOLD}Local JSON Staging:${NC} ${GREEN}data/json_staging/ (Zero-Cost Architecture)${NC}"
+echo -e "  🔄 ${BOLD}Live Reload:${NC}        ${GREEN}Enabled (Auto-reloads on file change)${NC}"
 echo -e "${CYAN}------------------------------------------------------------------------------${NC}"
 echo -e "  🛑 ${YELLOW}Press Ctrl+C to stop the server anytime.${NC}\n"
 

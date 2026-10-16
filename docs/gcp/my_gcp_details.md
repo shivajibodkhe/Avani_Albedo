@@ -106,3 +106,35 @@ The following required APIs are already enabled:
   "projectNumber": "615055398519"
 }
 ```
+
+---
+
+## 🪣 Google Cloud Storage (GCS)
+- **Staging Bucket:** `gs://avani-albedo-climate-staging/`
+- **Location:** `asia-south1` (Mumbai)
+- **Storage Class:** Standard (< ₹1 / month)
+- **Staging Directory:** `gs://avani-albedo-climate-staging/staging/`
+- **Purpose:** Receives high-fidelity JSONL batches for **zero-cost batch loading** into BigQuery.
+
+---
+
+## 📊 Google BigQuery Production Dataset
+- **Dataset ID:** `avani-albedo.avani_climate`
+- **Data Location:** `asia-south1`
+- **Live Tables (Verified):**
+  1. `urban_heat_cells` (59 rows with `GEOGRAPHY` spatial points)
+  2. `realtime_microclimate_telemetry` (59 rows of live ERA5/NOAA Heat Index telemetry)
+  3. `historical_heatwave_observations` (56 verified summer peak records from ECMWF ERA5)
+  4. `twenty_year_climate_trends` (65 rows of satellite radiometric time series)
+  5. `ward_vulnerability_index` (13 rows across all supported cities)
+  6. `heat_action_interventions` (6 prescriptive interventions)
+  7. `prescriptive_scenarios` (3 OR-Tools mathematical optimization runs)
+  8. `scientific_data_lineage` (3 peer-reviewed calibration standards)
+
+---
+
+## 🚀 Live Cloud Run Production Deployment
+- **Production URL:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)
+- **Container Registry:** `asia-south1-docker.pkg.dev/avani-albedo/avani-repo/avani-albedo:latest`
+- **Region:** `asia-south1`
+- **Security:** Full FastAPI Swagger `/docs` and API endpoints protected with Google Identity Platform / Firebase Auth.
