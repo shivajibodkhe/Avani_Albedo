@@ -100,6 +100,17 @@ def get_authenticated_user(
         )
     return session
 
+def get_optional_user(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None)
+) -> Optional[Dict[str, Any]]:
+    """Gracefully resolves authenticated user if available, without throwing 401."""
+    try:
+        return get_authenticated_user(request, authorization, token)
+    except Exception:
+        return None
+
 # In-memory cached dataset with computed HVI per city
 _CACHED_CELLS: Dict[str, List[ClimateCell]] = {}
 
@@ -641,10 +652,10 @@ def add_new_city_endpoint(
 @app.post("/api/help-bot/chat", response_model=CopilotChatResponse)
 def ask_project_copilot(
     payload: CopilotChatRequest,
-    user: Dict[str, Any] = Depends(get_authenticated_user)
+    user: Optional[Dict[str, Any]] = Depends(get_optional_user)
 ):
     """
-    Avani Project Help Bot powered by Gemini 2.5 Flash & Extensible JSON Knowledge Base.
+    Avani Project Help Bot powered by Gemini 2.0 Flash & Extensible JSON Knowledge Base.
     Answers any query strictly related to the Avani Albedo application.
     Enforces strict security guardrails: NEVER discloses passwords, credentials, or API keys.
     """

@@ -63,10 +63,10 @@ jobs:
             --max-instances=10
             --memory=1Gi
             --cpu=1
+            --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,JUDGE_PASSWORD=JUDGE_PASSWORD:latest
           env_vars: |
             GCP_PROJECT_ID=${{ env.PROJECT_ID }}
             ENVIRONMENT=production
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
 
       - name: Verify Live Deployment
         run: |
