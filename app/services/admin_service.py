@@ -238,7 +238,12 @@ class AdminService:
         self._alerts = [a for a in self._alerts if a.get("user_email") != clean]
         if firestore_service.is_connected and firestore_service.client:
             try:
-                for doc in firestore_service.client.collection("avani_alerts").where("user_email", "==", clean).stream():
+                try:
+                    from google.cloud.firestore import FieldFilter
+                    alert_query = firestore_service.client.collection("avani_alerts").where(filter=FieldFilter("user_email", "==", clean))
+                except Exception:
+                    alert_query = firestore_service.client.collection("avani_alerts").where("user_email", "==", clean)
+                for doc in alert_query.stream():
                     doc.reference.delete()
             except Exception as e:
                 logger.warning(f"Failed to delete alerts from Firestore: {e}")

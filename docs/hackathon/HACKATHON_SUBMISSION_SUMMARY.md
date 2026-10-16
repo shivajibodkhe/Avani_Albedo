@@ -75,4 +75,4 @@ While traditional GIS platforms merely observe heat hotspots, Avani Albedo compu
 | **Slide 11** | Snapshots of Prototype | Screenshot of the live running dashboard at `http://localhost:8000`. |
 | **Slide 12** | Performance & Benchmarks | Optimization solve time: `< 50ms`<br>Average temperature reduction: `-1.42°C`<br>Peak hotspot reduction: `-2.85°C`<br>Citizens protected: `142,500+` |
 | **Slide 13** | Future Development | 1. Drone thermal inspection ingestion<br>2. Carbon credit verification for cool roof retrofits<br>3. Citizen heat emergency reporting integration |
-| **Slide 14** | Submission Links | **GitHub:** `https://github.com/shivajibodkhe/Avani_Albedo`<br>**Live Demo:** *(Cloud Run URL upon deployment)*<br>**Video Demo:** *(3-min YouTube / Drive link)* |
+| **Slide 14** | Submission Links | **GitHub:** `https://github.com/shivajibodkhe/Avani_Albedo`<br>**Live Demo:** `https://avani-albedo-hbxrfbol2a-el.a.run.app`<br>**Video Demo:** *(3-min YouTube / Drive link)* |
