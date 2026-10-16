@@ -16,7 +16,8 @@ from app.models.schemas import (
     ActionPlanResponse, SystemStatusResponse,
     LoginRequest, LoginResponse, TemperatureTimelineResponse,
     CityTimelapseResponse, SpotEvaluationSummary, HeatCalendarSummary,
-    TwentyYearArchiveResponse, CopilotChatRequest, CopilotChatResponse
+    TwentyYearArchiveResponse, CopilotChatRequest, CopilotChatResponse,
+    AddCityRequest
 )
 from app.data.bengaluru_heat_data import get_bengaluru_climate_cells
 from app.data.cities_heat_data import (
@@ -27,6 +28,7 @@ from app.data.cities_heat_data import (
     get_spot_phase_evaluation,
     get_city_heat_calendar,
     get_twenty_year_satellite_archive,
+    register_new_city,
     CITIES_REGISTRY
 )
 from app.services.hvi_engine import calculate_hvi_for_cells
@@ -604,6 +606,36 @@ def trigger_satellite_fetch(
         city=payload.city,
         sensors=payload.sensors
     )
+
+@app.post("/api/admin/cities/add")
+def add_new_city_endpoint(
+    payload: AddCityRequest,
+    user: Dict[str, Any] = Depends(get_authenticated_user)
+):
+    """
+    Allows Admins to onboard and register a new metropolitan city.
+    Automatically synthesizes initial microclimate wards, calculates HVI,
+    and updates the geographic hierarchy.
+    """
+    entry = register_new_city(
+        city_name=payload.name,
+        country=payload.country,
+        country_flag=payload.country_flag,
+        center_lat=payload.latitude,
+        center_lng=payload.longitude,
+        currency=payload.currency,
+        currency_symbol=payload.currency_symbol,
+        default_budget=payload.default_budget
+    )
+    admin_service.increment_metric("earth_engine_queries")
+    return {
+        "status": "success",
+        "message": f"Successfully onboarded {payload.name} ({payload.country}) with {len(entry['raw_cells'])} microclimate wards.",
+        "city": entry["name"],
+        "city_key": payload.name.strip(),
+        "wards_count": len(entry["raw_cells"]),
+        "center": entry["center"]
+    }
 
 @app.post("/api/copilot/chat", response_model=CopilotChatResponse)
 @app.post("/api/help-bot/chat", response_model=CopilotChatResponse)

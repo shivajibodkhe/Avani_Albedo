@@ -310,6 +310,7 @@ def stage_historical_heatwaves():
         "Kolkata": (22.5726, 88.3639),
         "Ahmedabad": (23.0225, 72.5714),
         "Jaipur": (26.9124, 75.7873),
+        "Nagpur": (21.1458, 79.0882),
         "Dubai": (25.2048, 55.2708),
         "Abu Dhabi": (24.4539, 54.3773),
         "Phoenix": (33.4484, -112.0740),

@@ -480,5 +480,38 @@ def test_admin_satellite_ingestion_and_pipeline_telemetry():
     assert len(data["telemetry_logs"]) > 5
     assert any("Planck" in log for log in data["telemetry_logs"])
 
+def test_nagpur_cells_and_dynamic_city_registration():
+    # 1. Verify pre-registered Nagpur (Vidarbha Basin)
+    res = client.get("/api/cells?city=Nagpur")
+    assert res.status_code == 200
+    cells = res.json()
+    assert len(cells) == 5
+    assert any("Sitabuldi" in c["name"] for c in cells)
+    assert any("Hingna" in c["name"] for c in cells)
+
+    # 2. Test Admin Dynamic City Onboarding
+    add_res = client.post("/api/admin/cities/add", json={
+        "name": "Nashik",
+        "country": "India",
+        "country_flag": "🇮🇳",
+        "latitude": 19.9975,
+        "longitude": 73.7898,
+        "currency": "INR",
+        "currency_symbol": "₹",
+        "default_budget": 10000000.0
+    })
+    assert add_res.status_code == 200
+    add_data = add_res.json()
+    assert add_data["status"] == "success"
+    assert add_data["wards_count"] >= 4
+
+    # 3. Verify newly onboarded city is immediately queryable
+    res_new = client.get("/api/cells?city=Nashik")
+    assert res_new.status_code == 200
+    new_cells = res_new.json()
+    assert len(new_cells) >= 4
+    assert any("Nashik" in c["name"] for c in new_cells)
+
+
 
 

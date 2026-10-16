@@ -340,6 +340,26 @@ function initEventHandlers() {
     startSatIngestionBtn.addEventListener('click', handleSatelliteIngestion);
   }
 
+  const quickFillNagpur = document.getElementById('quick-fill-nagpur-btn');
+  if (quickFillNagpur) {
+    quickFillNagpur.addEventListener('click', () => {
+      const nameEl = document.getElementById('new-city-name');
+      const countryEl = document.getElementById('new-city-country');
+      const flagEl = document.getElementById('new-city-flag');
+      const latEl = document.getElementById('new-city-lat');
+      const lngEl = document.getElementById('new-city-lng');
+      const currEl = document.getElementById('new-city-currency');
+      const budgetEl = document.getElementById('new-city-budget');
+      if (nameEl) nameEl.value = "Nagpur";
+      if (countryEl) countryEl.value = "India";
+      if (flagEl) flagEl.value = "🇮🇳";
+      if (latEl) latEl.value = "21.1458";
+      if (lngEl) lngEl.value = "79.0882";
+      if (currEl) currEl.value = "INR|₹";
+      if (budgetEl) budgetEl.value = "12000000";
+    });
+  }
+
   // Target Geography Cascading Handlers
   const countrySelect = document.getElementById('country-select');
   if (countrySelect) {
@@ -1142,6 +1162,93 @@ async function handleSatelliteIngestion() {
     btn.innerHTML = `<span>🚀 Start Satellite Data Ingestion & Calibration</span>`;
   }
 }
+
+window.handleAddNewCitySubmit = async function(event) {
+  event.preventDefault();
+  const btn = document.getElementById('submit-add-city-btn');
+  const consoleEl = document.getElementById('add-city-console');
+  
+  const name = document.getElementById('new-city-name').value.trim();
+  const country = document.getElementById('new-city-country').value.trim();
+  const flag = document.getElementById('new-city-flag').value.trim();
+  const lat = parseFloat(document.getElementById('new-city-lat').value);
+  const lng = parseFloat(document.getElementById('new-city-lng').value);
+  const currVal = document.getElementById('new-city-currency').value;
+  const [currency, currencySymbol] = currVal.split('|');
+  const budget = parseFloat(document.getElementById('new-city-budget').value);
+
+  if (!btn || !consoleEl) return;
+  btn.disabled = true;
+  btn.innerHTML = `<span>⏳ Onboarding ${name}...</span>`;
+  consoleEl.classList.remove('hidden');
+  consoleEl.innerHTML = `<div style="color: #38bdf8;">[INIT] Registering ${name} (${country}) into Avani Albedo Core Engine...</div>`;
+
+  try {
+    const res = await fetch('/api/admin/cities/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        country: country,
+        country_flag: flag,
+        latitude: lat,
+        longitude: lng,
+        currency: currency,
+        currency_symbol: currencySymbol,
+        default_budget: budget
+      })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Onboarding failed with HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    
+    consoleEl.innerHTML += `
+      <div style="color: #60a5fa;">[GEOSPATIAL] Synthesized ${data.wards_count} microclimate polygons centered at [${lat}, ${lng}]...</div>
+      <div style="color: #60a5fa;">[HVI] Calculated baseline thermal severity, built density & critical infrastructure...</div>
+      <div style="color: #34d399; font-weight: bold;">[SUCCESS] ${data.message}</div>
+    `;
+
+    // Refresh geographic hierarchy and update all UI dropdowns
+    await loadGeographicHierarchy();
+    populateAdminSatDropdowns();
+
+    // Select the new city on the dashboard automatically
+    const countrySelect = document.getElementById('country-select');
+    if (countrySelect) {
+      for (let i = 0; i < countrySelect.options.length; i++) {
+        if (countrySelect.options[i].value.toLowerCase() === country.toLowerCase()) {
+          countrySelect.selectedIndex = i;
+          break;
+        }
+      }
+      populateCityDropdown(country);
+    }
+
+    const citySelect = document.getElementById('city-select');
+    if (citySelect) {
+      for (let i = 0; i < citySelect.options.length; i++) {
+        if (citySelect.options[i].value.toLowerCase() === data.city_key.toLowerCase()) {
+          citySelect.selectedIndex = i;
+          currentSelectedCity = citySelect.value;
+          await loadClimateCells(currentSelectedCity);
+          break;
+        }
+      }
+    }
+
+    consoleEl.innerHTML += `<div style="color: #facc15;">[NAVIGATED] Switched main dashboard GIS view to ${name}!</div>`;
+
+  } catch (err) {
+    consoleEl.innerHTML += `<div style="color: #ef4444;">[ERROR] Failed to onboard city: ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<span>🚀 Register City & Generate Microclimate Grid</span>`;
+  }
+};
+
 
 window.approveAlertWithRole = async function(alertId) {
   const select = document.getElementById(`alert-role-${alertId}`);

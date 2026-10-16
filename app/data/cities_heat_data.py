@@ -575,6 +575,55 @@ JAIPUR_CELLS_DATA = [
     }
 ]
 
+# ================= NAGPUR DATASET (VIDARBHA HEAT BASIN) =================
+NAGPUR_CELLS_DATA = [
+    {
+        "cell_id": "NAG_001", "name": "Sitabuldi Zero Mile Commercial Core", "zone": "Central Nagpur",
+        "center_lat": 21.1458, "center_lng": 79.0882,
+        "boundary": [[21.1560, 79.0780], [21.1560, 79.0980], [21.1350, 79.0980], [21.1350, 79.0780]],
+        "lst": 45.8, "ndvi": 0.05, "ndbi": 0.64, "albedo": 0.14, "heat_anomaly": +6.4,
+        "population": 195000, "assets": {"schools": 18, "hospitals": 12, "transit_stops": 38},
+        "built_density": 0.95, "heat_persistence_days": 86,
+        "max_trees": 1200, "max_cool_roof_sqft": 550000, "max_shades": 35, "max_hydration": 30
+    },
+    {
+        "cell_id": "NAG_002", "name": "MIDC Hingna Industrial Belt", "zone": "West Industrial",
+        "center_lat": 21.1210, "center_lng": 78.9860,
+        "boundary": [[21.1340, 78.9720], [21.1340, 79.0000], [21.1080, 79.0000], [21.1080, 78.9720]],
+        "lst": 47.1, "ndvi": 0.03, "ndbi": 0.68, "albedo": 0.12, "heat_anomaly": +7.7,
+        "population": 95000, "assets": {"schools": 6, "hospitals": 4, "transit_stops": 24},
+        "built_density": 0.92, "heat_persistence_days": 92,
+        "max_trees": 1800, "max_cool_roof_sqft": 800000, "max_shades": 30, "max_hydration": 25
+    },
+    {
+        "cell_id": "NAG_003", "name": "Itwari & Gandhibagh Wholesale Bazaars", "zone": "East Old City",
+        "center_lat": 21.1540, "center_lng": 79.1120,
+        "boundary": [[21.1650, 79.1020], [21.1650, 79.1220], [21.1430, 79.1220], [21.1430, 79.1020]],
+        "lst": 46.2, "ndvi": 0.04, "ndbi": 0.62, "albedo": 0.15, "heat_anomaly": +6.8,
+        "population": 230000, "assets": {"schools": 22, "hospitals": 9, "transit_stops": 34},
+        "built_density": 0.97, "heat_persistence_days": 88,
+        "max_trees": 800, "max_cool_roof_sqft": 600000, "max_shades": 38, "max_hydration": 35
+    },
+    {
+        "cell_id": "NAG_004", "name": "Dharampeth & Ramdaspeth Residential", "zone": "West Suburbs",
+        "center_lat": 21.1410, "center_lng": 79.0660,
+        "boundary": [[21.1510, 79.0550], [21.1510, 79.0770], [21.1310, 79.0770], [21.1310, 79.0550]],
+        "lst": 43.1, "ndvi": 0.11, "ndbi": 0.48, "albedo": 0.20, "heat_anomaly": +3.7,
+        "population": 160000, "assets": {"schools": 16, "hospitals": 10, "transit_stops": 22},
+        "built_density": 0.86, "heat_persistence_days": 68,
+        "max_trees": 1500, "max_cool_roof_sqft": 450000, "max_shades": 22, "max_hydration": 20
+    },
+    {
+        "cell_id": "NAG_005", "name": "Manish Nagar & Besa Growth Belt", "zone": "South Suburbs",
+        "center_lat": 21.0920, "center_lng": 79.0820,
+        "boundary": [[21.1030, 79.0700], [21.1030, 79.0940], [21.0810, 79.0940], [21.0810, 79.0700]],
+        "lst": 44.5, "ndvi": 0.06, "ndbi": 0.58, "albedo": 0.17, "heat_anomaly": +5.1,
+        "population": 175000, "assets": {"schools": 14, "hospitals": 6, "transit_stops": 26},
+        "built_density": 0.89, "heat_persistence_days": 76,
+        "max_trees": 2000, "max_cool_roof_sqft": 650000, "max_shades": 26, "max_hydration": 24
+    }
+]
+
 # ================= SINGAPORE DATASET =================
 SINGAPORE_CELLS_DATA = [
     {
@@ -738,6 +787,18 @@ CITIES_REGISTRY: Dict[str, Dict[str, Any]] = {
         "default_budget": 10000000.0,
         "raw_cells": JAIPUR_CELLS_DATA
     },
+    "Nagpur": {
+        "city_id": "nagpur",
+        "name": "Nagpur (Maharashtra)",
+        "country": "India",
+        "country_flag": "🇮🇳",
+        "center": [21.1458, 79.0882],
+        "zoom": 12,
+        "currency": "INR",
+        "currency_symbol": "₹",
+        "default_budget": 12000000.0,
+        "raw_cells": NAGPUR_CELLS_DATA
+    },
     "Dubai": {
         "city_id": "dubai",
         "name": "Dubai Urban Corridor",
@@ -825,6 +886,115 @@ def get_geographic_hierarchy() -> Dict[str, Any]:
         "default_city": "Bengaluru",
         "countries": list(hierarchy.values())
     }
+
+def register_new_city(
+    city_name: str,
+    country: str = "India",
+    country_flag: str = "🇮🇳",
+    center_lat: float = 21.1458,
+    center_lng: float = 79.0882,
+    currency: str = "INR",
+    currency_symbol: str = "₹",
+    default_budget: float = 12000000.0,
+    raw_cells: Optional[List[Dict[str, Any]]] = None
+) -> Dict[str, Any]:
+    """Dynamically registers an onboarded metropolitan city with microclimate wards."""
+    city_key = city_name.strip()
+    city_id = city_key.lower().replace(" ", "_").replace("-", "_")
+    
+    if not raw_cells:
+        prefix = (city_id[:3] if len(city_id) >= 3 else city_id).upper()
+        d_lat = 0.012
+        d_lng = 0.012
+        raw_cells = [
+            {
+                "cell_id": f"{prefix}_001",
+                "name": f"{city_key} Central Commercial Core",
+                "zone": "Central Core",
+                "center_lat": round(center_lat, 4),
+                "center_lng": round(center_lng, 4),
+                "boundary": [
+                    [round(center_lat + d_lat, 4), round(center_lng - d_lng, 4)],
+                    [round(center_lat + d_lat, 4), round(center_lng + d_lng, 4)],
+                    [round(center_lat - d_lat, 4), round(center_lng + d_lng, 4)],
+                    [round(center_lat - d_lat, 4), round(center_lng - d_lng, 4)]
+                ],
+                "lst": 44.8, "ndvi": 0.05, "ndbi": 0.62, "albedo": 0.15, "heat_anomaly": +5.8,
+                "population": 180000,
+                "assets": {"schools": 16, "hospitals": 10, "transit_stops": 34},
+                "built_density": 0.94, "heat_persistence_days": 82,
+                "max_trees": 1200, "max_cool_roof_sqft": 550000, "max_shades": 32, "max_hydration": 28
+            },
+            {
+                "cell_id": f"{prefix}_002",
+                "name": f"{city_key} Industrial & Logistics Corridor",
+                "zone": "West Industrial",
+                "center_lat": round(center_lat - 0.025, 4),
+                "center_lng": round(center_lng - 0.035, 4),
+                "boundary": [
+                    [round(center_lat - 0.015, 4), round(center_lng - 0.045, 4)],
+                    [round(center_lat - 0.015, 4), round(center_lng - 0.025, 4)],
+                    [round(center_lat - 0.035, 4), round(center_lng - 0.025, 4)],
+                    [round(center_lat - 0.035, 4), round(center_lng - 0.045, 4)]
+                ],
+                "lst": 46.5, "ndvi": 0.03, "ndbi": 0.67, "albedo": 0.13, "heat_anomaly": +7.1,
+                "population": 90000,
+                "assets": {"schools": 6, "hospitals": 4, "transit_stops": 22},
+                "built_density": 0.91, "heat_persistence_days": 88,
+                "max_trees": 1800, "max_cool_roof_sqft": 750000, "max_shades": 28, "max_hydration": 24
+            },
+            {
+                "cell_id": f"{prefix}_003",
+                "name": f"{city_key} Dense Old City Bazaar Belt",
+                "zone": "East Heritage",
+                "center_lat": round(center_lat + 0.015, 4),
+                "center_lng": round(center_lng + 0.022, 4),
+                "boundary": [
+                    [round(center_lat + 0.025, 4), round(center_lng + 0.012, 4)],
+                    [round(center_lat + 0.025, 4), round(center_lng + 0.032, 4)],
+                    [round(center_lat + 0.005, 4), round(center_lng + 0.032, 4)],
+                    [round(center_lat + 0.005, 4), round(center_lng + 0.012, 4)]
+                ],
+                "lst": 45.4, "ndvi": 0.04, "ndbi": 0.60, "albedo": 0.16, "heat_anomaly": +6.2,
+                "population": 215000,
+                "assets": {"schools": 20, "hospitals": 8, "transit_stops": 32},
+                "built_density": 0.96, "heat_persistence_days": 85,
+                "max_trees": 850, "max_cool_roof_sqft": 520000, "max_shades": 35, "max_hydration": 30
+            },
+            {
+                "cell_id": f"{prefix}_004",
+                "name": f"{city_key} Growth Corridor & Suburbs",
+                "zone": "South Suburbs",
+                "center_lat": round(center_lat - 0.030, 4),
+                "center_lng": round(center_lng + 0.010, 4),
+                "boundary": [
+                    [round(center_lat - 0.020, 4), round(center_lng, 4)],
+                    [round(center_lat - 0.020, 4), round(center_lng + 0.020, 4)],
+                    [round(center_lat - 0.040, 4), round(center_lng + 0.020, 4)],
+                    [round(center_lat - 0.040, 4), round(center_lng, 4)]
+                ],
+                "lst": 42.8, "ndvi": 0.09, "ndbi": 0.50, "albedo": 0.20, "heat_anomaly": +3.5,
+                "population": 150000,
+                "assets": {"schools": 14, "hospitals": 6, "transit_stops": 20},
+                "built_density": 0.86, "heat_persistence_days": 64,
+                "max_trees": 2000, "max_cool_roof_sqft": 600000, "max_shades": 24, "max_hydration": 20
+            }
+        ]
+
+    entry = {
+        "city_id": city_id,
+        "name": f"{city_key} ({country})",
+        "country": country,
+        "country_flag": country_flag,
+        "center": [center_lat, center_lng],
+        "zoom": 12,
+        "currency": currency,
+        "currency_symbol": currency_symbol,
+        "default_budget": default_budget,
+        "raw_cells": raw_cells
+    }
+    CITIES_REGISTRY[city_key] = entry
+    return entry
 
 def get_climate_cells_for_city(city_name: str) -> List[ClimateCell]:
     """Loads and instantiates ClimateCell objects for any registered city."""

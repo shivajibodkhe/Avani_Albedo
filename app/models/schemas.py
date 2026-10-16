@@ -279,3 +279,13 @@ class CopilotChatResponse(BaseModel):
     model: str
     sources: List[str] = Field(default_factory=list)
 
+class AddCityRequest(BaseModel):
+    name: str
+    country: str = "India"
+    country_flag: str = "🇮🇳"
+    latitude: float
+    longitude: float
+    currency: str = "INR"
+    currency_symbol: str = "₹"
+    default_budget: float = 12000000.0
+
