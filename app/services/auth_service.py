@@ -15,7 +15,7 @@ class AuthService:
 
     @property
     def judge_password(self) -> str:
-        return os.getenv("JUDGE_PASSWORD", "AvaniAlbedo12042026#")
+        return os.getenv("JUDGE_PASSWORD", "AvaniJudge@2026")
 
     @property
     def allowed_emails(self) -> List[str]:

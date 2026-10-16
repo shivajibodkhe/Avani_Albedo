@@ -33,9 +33,10 @@ def test_api_status():
 
 def test_authenticate_client():
     """Authenticate the client session for data retrieval tests."""
+    from app.services.auth_service import auth_service
     login_res = client.post("/api/auth/login", json={
         "email": "judges",
-        "password": "AvaniAlbedo12042026#"
+        "password": auth_service.judge_password
     })
     assert login_res.status_code == 200
 
@@ -86,9 +87,10 @@ def test_api_auth():
     assert cfg["default_judge_email"] == "judges"
 
     # 2. Valid Login for judge
+    from app.services.auth_service import auth_service
     res_valid = client.post("/api/auth/login", json={
         "email": "judges",
-        "password": "AvaniAlbedo12042026#"
+        "password": auth_service.judge_password
     })
     assert res_valid.status_code == 200
     data = res_valid.json()
@@ -105,7 +107,7 @@ def test_api_auth():
     # 3. Valid Login for super admin (srbodkhe@gmail.com)
     res_admin = client.post("/api/auth/login", json={
         "email": "srbodkhe@gmail.com",
-        "password": "AvaniAlbedo12042026#"
+        "password": auth_service.judge_password
     })
     assert res_admin.status_code == 200
     assert res_admin.json()["role"] == "Super Admin"
@@ -120,7 +122,7 @@ def test_api_auth():
     # 5. Invalid Login (unauthorized email)
     res_invalid_email = client.post("/api/auth/login", json={
         "email": "intruder@stranger.org",
-        "password": "AvaniAlbedo12042026#"
+        "password": auth_service.judge_password
     })
     assert res_invalid_email.status_code == 401
 
@@ -133,7 +135,7 @@ def test_api_auth():
     # Revert back to original
     client.post("/api/admin/users/reset-password", json={
         "email": "judges",
-        "new_password": "AvaniAlbedo12042026#"
+        "new_password": auth_service.judge_password
     })
 
 def test_firebase_auth_and_admin_portal():

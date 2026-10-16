@@ -39,7 +39,7 @@ echo -n "YOUR_GEMINI_API_KEY_HERE" | gcloud secrets create GEMINI_API_KEY \
     --replication-policy="automatic"
 
 # Store Judge Access Password
-echo -n "AvaniAlbedo12042026#" | gcloud secrets create JUDGE_PASSWORD \
+echo -n "YOUR_SECURE_JUDGE_PASSWORD" | gcloud secrets create JUDGE_PASSWORD \
     --data-file=- \
     --project=avani-albedo \
     --replication-policy="automatic"

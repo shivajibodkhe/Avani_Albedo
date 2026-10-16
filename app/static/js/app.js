@@ -979,7 +979,7 @@ async function handleSaveAdminSettings(e) {
 
 // Global actions exposed for inline table onclick
 window.promptResetPassword = async function(email) {
-  const newPw = prompt(`🔑 Reset Password for ${email}:\n\nEnter new password:`, "AvaniAlbedo12042026#");
+  const newPw = prompt(`🔑 Reset Password for ${email}:\n\nEnter new password:`, "AvaniJudge@2026");
   if (!newPw) return;
   try {
     const res = await fetch('/api/admin/users/reset-password', {

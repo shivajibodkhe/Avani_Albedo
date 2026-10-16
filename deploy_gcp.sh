@@ -172,19 +172,20 @@ fi
 
 # Judge Password Secret
 echo -e "  • Ensuring JUDGE_PASSWORD secret exists in Secret Manager..."
+TARGET_JUDGE_PW="${JUDGE_PASSWORD:-AvaniJudge@2026}"
 if gcloud secrets describe JUDGE_PASSWORD --project="${PROJECT_ID}" &>/dev/null; then
-    echo -n "AvaniAlbedo12042026#" | gcloud secrets versions add JUDGE_PASSWORD \
+    echo -n "${TARGET_JUDGE_PW}" | gcloud secrets versions add JUDGE_PASSWORD \
         --data-file=- \
         --project="${PROJECT_ID}" \
         --quiet
 else
-    echo -n "AvaniAlbedo12042026#" | gcloud secrets create JUDGE_PASSWORD \
+    echo -n "${TARGET_JUDGE_PW}" | gcloud secrets create JUDGE_PASSWORD \
         --data-file=- \
         --replication-policy="automatic" \
         --project="${PROJECT_ID}" \
         --quiet
 fi
-echo -e "${GREEN}  ✓ JUDGE_PASSWORD secret secured (AvaniAlbedo12042026#).${NC}"
+echo -e "${GREEN}  ✓ JUDGE_PASSWORD secret secured in Secret Manager.${NC}"
 
 # Grant Secret Accessor role to Compute service account
 echo -e "  • Granting Secret Accessor IAM role to Cloud Run service account..."
@@ -251,6 +252,6 @@ echo -e "  🌐 ${BOLD}Live Application URL:${NC}    ${MAGENTA}${LIVE_URL}${NC}"
 echo -e "  📑 ${BOLD}Interactive Swagger API:${NC} ${CYAN}${LIVE_URL}/docs${NC}"
 echo -e "  🩺 ${BOLD}API Health Status:${NC}       ${GREEN}HTTP ${STATUS_CODE} (Healthy)${NC}"
 echo -e "  🛡️  ${BOLD}Cost Guardrail:${NC}          ${YELLOW}Scale-to-zero (0 idle instances), capped at max 2 instances${NC}"
-echo -e "  ⚖️  ${BOLD}Judges Login:${NC}            ${BOLD}UserName: judges | Password: AvaniAlbedo12042026#${NC}"
+echo -e "  ⚖️  ${BOLD}Judges Login:${NC}            ${BOLD}UserName: judges | 1-Click Evaluation Mode Enabled${NC}"
 echo -e "  👑 ${BOLD}Super Admin:${NC}             ${BOLD}srbodkhe@gmail.com${NC}"
 echo -e "${BOLD}${GREEN}==============================================================================${NC}\n"
