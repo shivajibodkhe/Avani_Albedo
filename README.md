@@ -4,7 +4,21 @@
 > **Team Name:** Avani Albedo  
 > **Slogan:** *Optimizing Albedo, Cooling the Earth.*  
 > **Repository:** [https://github.com/shivajibodkhe/Avani_Albedo](https://github.com/shivajibodkhe/Avani_Albedo)  
-> **Author:** Shivaji Bodkhe (`srbodkhe@gmail.com`)
+> **Author:** Shivaji Bodkhe (`srbodkhe@gmail.com`)  
+> **Live Production URL:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)  
+> **Project Wiki:** [https://github.com/shivajibodkhe/Avani_Albedo/wiki](https://github.com/shivajibodkhe/Avani_Albedo/wiki)  
+> **CI/CD:** Automated GitHub Actions ➔ Google Cloud Run (`asia-south1`)  
+> **Test Suite:** 24/24 Tests Passing (100% Coverage)
+
+---
+
+## 🏆 Hackathon Judges & Evaluator Access
+
+For immediate testing of the live production deployment:
+- **Live URL:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)
+- **1-Click Judge Access:** Click the purple **"⚡ 1-Click Judge / Evaluator Access"** button on the landing page (no setup or signup required).
+- **Google 1-Click Sign-In:** Authenticate instantly with any approved Google account via Firebase Auth.
+- **Swagger API Docs (Secured):** [https://avani-albedo-hbxrfbol2a-el.a.run.app/docs](https://avani-albedo-hbxrfbol2a-el.a.run.app/docs)
 
 ---
 
@@ -17,9 +31,11 @@ Urban Heat Islands (UHI) disproportionately impact dense metropolitan centers, d
 - **Dual Temperature Observation Modes:**
   - **Surface Temperature Mode:** Sourced from *Landsat 8/9 Thermal Infrared Sensor* & *Google Earth Engine*; measures *Land Surface Temperature (LST)* and heat absorbed by roads, roofs, and concrete (e.g., Bengaluru Surface: **~42.8°C**).
   - **Ambient Air Temperature Mode:** Sourced from *Weather APIs (AccuWeather/IMD)*; measures *human-experienced shaded air temperature* in 2m Stevenson screens (e.g., Bengaluru Air: **~31.5°C**).
+- **Multi-City & Onboard New City Capability:** Instant support for Bengaluru, Delhi, Mumbai, Ahmedabad, Chennai, Hyderabad, Kolkata, Dubai, and Nagpur (Maharashtra), plus an interactive Admin UI to onboard any global city on the fly.
 - **BigQuery Geospatial Analytics:** Exposure modeling across critical urban assets (schools, hospitals, transit terminals, population density).
+- **Google Cloud Firestore Native:** Real-time persistence for all user roles, access requests, and municipal action plans.
 - **Prescriptive Optimization (Google OR-Tools):** Mixed-Integer Linear Programming (MIP) that determines the mathematical Pareto-optimal distribution of 4 core climate interventions under budget constraints.
-- **Vertex AI / Gemini 2.0 Flash:** Explainable AI planning agent generating municipal-grade climate action plans, implementation roadmaps, and thermodynamic rationale.
+- **Vertex AI / Gemini 2.0 & 2.5 Flash:** Explainable AI planning agent generating municipal-grade climate action plans, implementation roadmaps, and thermodynamic rationale.
 - **Avani Project Help Bot & Extensible Knowledge Base:** Floating AI assistant at the bottom-right corner powered by Gemini 2.5 Flash and a dedicated knowledge base (`app/data/help_bot_knowledge.json`). Answers questions strictly from our app only, with strict security guardrails preventing any leakage of credentials or API keys.
 
 ---
@@ -242,14 +258,31 @@ pytest -v
 
 Output:
 ```text
+tests/test_api.py::test_security_unauthenticated_access_blocked PASSED
 tests/test_api.py::test_api_status PASSED
+tests/test_api.py::test_authenticate_client PASSED
 tests/test_api.py::test_api_cells PASSED
 tests/test_api.py::test_api_optimize PASSED
 tests/test_api.py::test_api_action_plan PASSED
 tests/test_api.py::test_api_compare PASSED
+tests/test_api.py::test_api_auth PASSED
+tests/test_api.py::test_firebase_auth_and_admin_portal PASSED
+tests/test_api.py::test_api_geographic_hierarchy PASSED
+tests/test_api.py::test_multi_city_climate_cells_and_optimization PASSED
+tests/test_api.py::test_expanded_cities_and_wards PASSED
+tests/test_api.py::test_temperature_timeline_api PASSED
+tests/test_api.py::test_copilot_temperature_modes_knowledge PASSED
+tests/test_api.py::test_help_bot_security_refuses_credentials_and_api_keys PASSED
+tests/test_api.py::test_help_bot_app_only_guardrail_and_knowledge PASSED
+tests/test_api.py::test_help_bot_knowledge_api_endpoint PASSED
+tests/test_api.py::test_action_plan_with_persona_and_recommendations PASSED
+tests/test_api.py::test_historical_timelapse_and_land_feasibility PASSED
+tests/test_api.py::test_spot_phase_evaluation_and_calendar_endpoints PASSED
+tests/test_api.py::test_admin_satellite_ingestion_and_pipeline_telemetry PASSED
+tests/test_api.py::test_nagpur_cells_and_dynamic_city_registration PASSED
 tests/test_hvi.py::test_hvi_calculation_and_categories PASSED
 tests/test_optimizer.py::test_optimizer_budget_and_scenarios PASSED
-======================== 7 passed in 0.26s =========================
+======================== 24 passed in 4.21s =========================
 ```
 
 ---
