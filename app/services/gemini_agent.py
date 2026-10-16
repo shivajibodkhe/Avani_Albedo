@@ -338,7 +338,7 @@ def generate_fallback_plan(
         ward_priorities=ward_priorities,
         implementation_phases=phases,
         co_benefits=co_benefits,
-        llm_model="Vertex AI Gemini 2.5 Flash",
+        llm_model="Vertex AI Gemini 2.0 Flash (Deterministic Baseline)",
         is_live_llm=False,
         spot_phase_evaluation=spot_eval,
         heat_calendar=calendar,
@@ -403,10 +403,21 @@ Please respond strictly in valid JSON format with the following keys:
   "co_benefits": ["benefit 1", "benefit 2", "benefit 3"]
 }}
 """
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
-        )
+        response = None
+        for model_name in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                if response and response.text:
+                    logger.info(f"Successfully generated action plan with {model_name}")
+                    break
+            except Exception as e:
+                logger.warning(f"Error calling Gemini model {model_name}: {e}")
+
+        if not response or not response.text:
+            raise RuntimeError("All Gemini flash models failed or returned empty.")
         
         text = response.text.strip()
         if text.startswith("```json"):
@@ -443,7 +454,7 @@ Please respond strictly in valid JSON format with the following keys:
             ward_priorities=ward_priorities,
             implementation_phases=phases,
             co_benefits=data.get("co_benefits", []),
-            llm_model="Gemini 2.5 Flash (Live Vertex/Studio)",
+            llm_model="Gemini 2.0 Flash (Live Vertex/Studio)",
             is_live_llm=True,
             spot_phase_evaluation=spot_eval,
             heat_calendar=calendar,

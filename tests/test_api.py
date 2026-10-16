@@ -392,6 +392,25 @@ def test_help_bot_knowledge_api_endpoint():
     assert "temperature_modes" in kb["topics"]
     assert "interventions" in kb["topics"]
     assert "optimizer" in kb["topics"]
+    assert "gemini_api_key_configuration" in kb["topics"]
+
+def test_help_bot_key_configuration_inquiry_and_dynamic_responses():
+    from app.services.copilot_service import help_bot_service
+
+    # 1. Asking how/where to update or configure the key should return instructions (NOT a security refusal!)
+    ans_key = help_bot_service.ask("where can I update Gemini Key ?")
+    assert "How to Update Your Gemini API Key" in ans_key["response"]
+    assert "Admin" in ans_key["response"]
+    assert "Security Policy Enforcement" not in ans_key["response"]
+
+    # 2. Greeting inquiry
+    ans_greet = help_bot_service.ask("Hello, who are you?")
+    assert "Welcome to Avani Albedo Help Bot" in ans_greet["response"]
+
+    # 3. Specific city climate inquiry
+    ans_city = help_bot_service.ask("Tell me about Nagpur climate and temperature")
+    assert "Microclimate Analysis: Nagpur" in ans_city["response"]
+    assert "Land Surface Temperature" in ans_city["response"]
 
 def test_action_plan_with_persona_and_recommendations():
     res = client.post("/api/action-plan", json={

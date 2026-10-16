@@ -63,4 +63,26 @@ class FirestoreService:
                 logger.warning(f"Failed reading live Firestore: {e}")
         return sorted(self._in_memory_store, key=lambda x: x["created_at"], reverse=True)[:limit]
 
+    def save_runtime_config(self, config_dict: Dict[str, Any]) -> bool:
+        """Persists runtime configuration (including user-configured Gemini API key) to Firestore."""
+        if self.is_connected and self.client:
+            try:
+                self.client.collection("avani_config").document("runtime").set(config_dict, merge=True)
+                logger.info("Persisted runtime configuration to Firestore (collection: avani_config, doc: runtime)")
+                return True
+            except Exception as e:
+                logger.warning(f"Failed to persist runtime config to Firestore: {e}")
+        return False
+
+    def get_runtime_config(self) -> Dict[str, Any]:
+        """Loads runtime configuration from Firestore if available."""
+        if self.is_connected and self.client:
+            try:
+                doc = self.client.collection("avani_config").document("runtime").get()
+                if doc.exists:
+                    return doc.to_dict() or {}
+            except Exception as e:
+                logger.warning(f"Failed to load runtime config from Firestore: {e}")
+        return {}
+
 firestore_service = FirestoreService()

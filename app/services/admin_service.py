@@ -43,13 +43,14 @@ class AdminService:
         # 2. Load from Persistent Storage (Firestore / Local JSON)
         self._load_users_from_storage()
         self._load_alerts_from_storage()
+        self._load_config_from_storage()
 
         # 3. API Quotas & Usage Tracking
         self._quotas: Dict[str, Any] = {
             "gemini_calls": {
                 "used": 14,
                 "limit": 1500,
-                "label": "Gemini 2.5 Flash Calls / Day (Free Tier: 1,500 RPD)"
+                "label": "Gemini 2.0 Flash Calls / Day (Free Tier: 1,500 RPD)"
             },
             "optimizer_runs": {
                 "used": 42,
@@ -173,6 +174,21 @@ class AdminService:
                 json.dump(self._alerts, f, indent=2)
         except Exception as e:
             logger.warning(f"Failed to write alerts to {ALERTS_FILE}: {e}")
+
+    def _load_config_from_storage(self):
+        """Loads runtime configuration (including user-configured Gemini API key) from Firestore."""
+        try:
+            persisted = firestore_service.get_runtime_config()
+            if persisted:
+                if not settings.GEMINI_API_KEY and persisted.get("gemini_api_key"):
+                    settings.GEMINI_API_KEY = persisted["gemini_api_key"].strip()
+                    os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
+                    logger.info("Loaded GEMINI_API_KEY from persistent Firestore configuration.")
+                if persisted.get("gcp_project_id") and settings.GCP_PROJECT_ID == "avani-albedo":
+                    settings.GCP_PROJECT_ID = persisted["gcp_project_id"].strip()
+                    os.environ["GCP_PROJECT_ID"] = settings.GCP_PROJECT_ID
+        except Exception as e:
+            logger.debug(f"Could not load Firestore runtime config: {e}")
 
     # ================= USER MANAGEMENT =================
     def list_users(self) -> List[Dict[str, Any]]:
@@ -337,20 +353,54 @@ class AdminService:
         }
 
     def update_runtime_config(self, updates: Dict[str, Any]) -> Dict[str, Any]:
+        conf_to_persist = {}
         if "gemini_api_key" in updates and updates["gemini_api_key"]:
             settings.GEMINI_API_KEY = updates["gemini_api_key"].strip()
             os.environ["GEMINI_API_KEY"] = settings.GEMINI_API_KEY
+            conf_to_persist["gemini_api_key"] = settings.GEMINI_API_KEY
+
+            # Immediately refresh Help Bot / Copilot Gemini client
+            try:
+                from app.services.copilot_service import copilot_service
+                copilot_service._init_client()
+            except Exception as e:
+                logger.warning(f"Failed refreshing copilot client on key update: {e}")
+
+            # Persist to local .env if present
+            env_file = Path(__file__).resolve().parent.parent.parent / ".env"
+            if env_file.exists():
+                try:
+                    import re
+                    content = env_file.read_text(encoding="utf-8")
+                    if "GEMINI_API_KEY=" in content:
+                        new_content = re.sub(r"GEMINI_API_KEY=.*", f"GEMINI_API_KEY={settings.GEMINI_API_KEY}", content)
+                    else:
+                        new_content = content + f"\nGEMINI_API_KEY={settings.GEMINI_API_KEY}\n"
+                    env_file.write_text(new_content, encoding="utf-8")
+                    logger.info("Persisted GEMINI_API_KEY to local .env file")
+                except Exception as ex:
+                    logger.warning(f"Could not update local .env file: {ex}")
 
         if "gcp_project_id" in updates and updates["gcp_project_id"]:
             settings.GCP_PROJECT_ID = updates["gcp_project_id"].strip()
             os.environ["GCP_PROJECT_ID"] = settings.GCP_PROJECT_ID
+            conf_to_persist["gcp_project_id"] = settings.GCP_PROJECT_ID
 
         if "use_earth_engine_live" in updates:
             settings.USE_EARTH_ENGINE_LIVE = bool(updates["use_earth_engine_live"])
             os.environ["USE_EARTH_ENGINE_LIVE"] = str(settings.USE_EARTH_ENGINE_LIVE).lower()
+            conf_to_persist["use_earth_engine_live"] = settings.USE_EARTH_ENGINE_LIVE
 
         if "allowed_emails" in updates and updates["allowed_emails"]:
             os.environ["ALLOWED_EMAILS"] = updates["allowed_emails"].strip()
+            conf_to_persist["allowed_emails"] = os.environ["ALLOWED_EMAILS"]
+
+        # Persist to Firestore so all Cloud Run instances share the updated settings
+        if conf_to_persist:
+            try:
+                firestore_service.save_runtime_config(conf_to_persist)
+            except Exception as e:
+                logger.warning(f"Failed to persist runtime config to Firestore: {e}")
 
         logger.info("Runtime configuration updated by Admin")
         return self.get_runtime_config()

@@ -106,6 +106,15 @@
         "how to use", "guide", "tutorial", "steps", "walkthrough", "dashboard", "run agent"
       ],
       "content": "### 🧭 How to Use Avani Albedo: Step-by-Step\n\n1. **Select Region:** Choose your Country, State, and City from the top navigation dropdowns.\n2. **Explore the GIS Map:** View the ward polygons color-coded by Heat Vulnerability Index (HVI). Click any ward to view Surface Temp (LST) and Ambient Air Temp.\n3. **Adjust Budget Slider:** In the left sidebar, slide the investment budget (e.g. ₹10 Lakhs to ₹5 Crores).\n4. **Pick Policy & Persona:** Select your objective (AI Pareto, Green First, Albedo First, Public Health First) and municipal persona.\n5. **Click '🚀 Run Avani Climate Agent':** Within 50ms, Google OR-Tools computes the optimal mix of trees, cool roofs, shades, and hydration kiosks.\n6. **View Results:** Explore the 5 analysis tabs (Prescriptive Action Plan, 4-Scenario Comparison, Diurnal Timeline & Forecast, Earth Timelapse, Land Feasibility & Heat Calendar).\n7. **Export Plan:** Click '📄 Print / Export Plan' to download an executive municipal briefing."
+    },
+    "gemini_api_key_configuration": {
+      "title": "How to Configure and Update Google Gemini API Key",
+      "keywords": [
+        "gemini key", "api key", "update key", "enter key", "configure key",
+        "where to update", "where do i update", "where can i update",
+        "how to update gemini key", "gemini api", "ai key", "key setup", "set key"
+      ],
+      "content": "### 🔑 How to Update Your Gemini API Key in Avani Albedo\n\nYou can easily activate real-time Gemini generation across the platform:\n\n1. 🛡️ **Method 1: Via the In-App Admin Settings (Instant Live Activation)**\n   - Click the **Admin** shield icon in the top navigation header.\n   - Sign in using your Admin credentials (`srbodkhe@gmail.com` via Google Sign-In or Judge credentials).\n   - Scroll down to the **API Keys & Cloud Configuration** card.\n   - Paste your key into the **Gemini 2.0 Flash API Key** field.\n   - Click **Update Runtime Configuration**.\n   - *Result:* Both the AI Action Planner and Help Bot immediately connect to live Gemini 2.0 Flash without restarting!\n\n2. 💻 **Method 2: Via Local `.env` File (For Local Development)**\n   - Open your project `.env` file in the root folder.\n   - Set `GEMINI_API_KEY=AIzaSy...`\n   - Save and start the server (`uvicorn app.main:app`).\n\n3. ☁️ **Method 3: Via Google Cloud Run (Production Deployment)**\n   - Pass it in deployment: `gcloud run services update avani-albedo --set-env-vars GEMINI_API_KEY=AIzaSy... --region=asia-south1`\n   - Or store it securely in Google Cloud Secret Manager: `gcloud secrets create GEMINI_API_KEY ...`"
     }
   }
 }

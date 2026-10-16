@@ -89,6 +89,7 @@ class HelpBotService:
     """
     def __init__(self):
         self.gemini_client = None
+        self._current_key = None
         self.knowledge = load_help_bot_knowledge()
         self._init_client()
 
@@ -99,26 +100,44 @@ class HelpBotService:
         return self.knowledge
 
     def _init_client(self):
-        api_key = settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")
+        api_key = (settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")).strip()
         if api_key:
+            if self.gemini_client and self._current_key == api_key:
+                return
             try:
                 from google import genai
                 self.gemini_client = genai.Client(api_key=api_key)
-                logger.info("HelpBotService initialized with live Gemini 2.5 Flash client.")
+                self._current_key = api_key
+                logger.info("HelpBotService initialized with live Gemini client (API key active).")
             except Exception as e:
                 logger.warning(f"Failed to initialize live Gemini client: {e}")
                 self.gemini_client = None
+                self._current_key = None
+        else:
+            self.gemini_client = None
+            self._current_key = None
 
     def _is_security_sensitive_query(self, query: str) -> bool:
-        """Checks if the query is attempting to extract credentials, passwords, or API keys."""
+        """Checks if the query is attempting to exfiltrate or reveal passwords, credentials, or internal secrets."""
         q_lower = query.lower()
+        # Allow legitimate administrative questions asking how or where to update/configure keys
+        config_inquiry = any(p in q_lower for p in [
+            "where can i update", "where do i update", "where to update",
+            "how to update", "how can i update", "how do i update",
+            "how to configure", "how do i set", "how to enter", "where do i enter",
+            "where to enter", "where is the key", "how to change"
+        ])
+        if config_inquiry and not any(ex in q_lower for ex in ["show", "reveal", "leak", "dump", "print", "give me the"]):
+            return False
+
         sensitive_patterns = [
-            r"\b(password|passwords|adminpass|admin_pass)\b",
-            r"\b(api[_\s]?keys?|apikeys?|secret[_\s]?keys?)\b",
-            r"\b(credentials?|login[_\s]?credentials?)\b",
-            r"\b(auth[_\s]?tokens?|private[_\s]?keys?)\b",
-            r"\b(service[_\s]?account[_\s]?keys?|\.env\b)\b",
-            r"\b(show|give|tell|reveal|what is|print|dump|leak)\b.*\b(password|key|secret|credential|token)\b"
+            r"\b(password|passwords|adminpass|admin_pass|avani2026)\b",
+            r"\b(give|tell|reveal|show|dump|print|leak|exfiltrate)\b.*(key|secret|credential|token|password)",
+            r"\b(what\s+is\s+(the\s+)?(admin\s+)?password)\b",
+            r"\b(give\s+me\s+the\s+gemini_api_key)\b",
+            r"\b(service[_\s]?account[_\s]?keys?|\.env\b)",
+            r"\bcredentials\s+and\s+secrets\b",
+            r"\b(show|reveal|give|dump)\b.*(all\s+credentials|all\s+secrets)"
         ]
         return any(re.search(pat, q_lower) for pat in sensitive_patterns)
 
@@ -131,9 +150,10 @@ class HelpBotService:
             "optimize", "optimizer", "or-tools", "scip", "budget", "gcp", "cloud run",
             "firestore", "earth engine", "landsat", "sentinel", "bigquery", "timelapse",
             "ward", "cell", "bengaluru", "delhi", "mumbai", "pune", "dubai", "phoenix",
-            "london", "singapore", "persona", "commissioner", "planner", "health officer",
-            "sensor", "accuweather", "imd", "aws", "weather", "feasibility", "soil",
-            "currency", "how to use", "help", "guide", "what is", "explain", "who are you"
+            "nagpur", "hyderabad", "london", "singapore", "persona", "commissioner",
+            "planner", "health officer", "sensor", "accuweather", "imd", "aws", "weather",
+            "feasibility", "soil", "currency", "how to use", "help", "guide", "what is",
+            "explain", "who are you", "api key", "gemini"
         ]
         has_project_intent = any(k in q_lower for k in project_keywords)
         if has_project_intent:
@@ -186,14 +206,14 @@ class HelpBotService:
                 "sources": ["Avani Albedo Project Boundary"]
             }
 
-        # Re-check client in case key was configured
-        if not self.gemini_client and settings.GEMINI_API_KEY:
+        # Re-check client in case key was updated in settings/env
+        current_key = (settings.GEMINI_API_KEY or os.getenv("GEMINI_API_KEY", "")).strip()
+        if current_key and (not self.gemini_client or getattr(self, "_current_key", None) != current_key):
             self._init_client()
 
-        # 3. LIVE GEMINI 2.5 FLASH INVOCATION
+        # 3. LIVE GEMINI INVOCATION (Cascade: gemini-2.0-flash -> gemini-1.5-flash)
         if self.gemini_client:
-            try:
-                prompt = f"""SYSTEM CONTEXT:
+            prompt = f"""SYSTEM CONTEXT:
 {HELP_BOT_SYSTEM_PROMPT}
 
 CURRENT ACTIVE CITY: {city}
@@ -201,43 +221,128 @@ CURRENT ACTIVE CITY: {city}
 USER QUESTION:
 {clean_query}
 """
-                response = self.gemini_client.models.generate_content(
-                    model="gemini-2.5-flash",
-                    contents=prompt
-                )
-                if response and response.text:
-                    resp_text = response.text.strip()
-                    # Post-check safety guardrail: Redact if any accidental secret token is caught
-                    if any(s in resp_text.lower() for s in ["adminpass", "avani2026", "gemini_api_key="]):
-                        resp_text = "🔒 **Security Notice:** Content redacted to comply with credential protection policies."
-                    return {
-                        "status": "success",
-                        "response": resp_text,
-                        "model": "Vertex AI Gemini 2.5 Flash",
-                        "sources": ["Google GenAI SDK", "Avani Albedo Knowledge Base"]
-                    }
-            except Exception as e:
-                logger.warning(f"Live Gemini Help Bot call failed ({e}). Using resilient knowledge base fallback.")
+            for model_name in ["gemini-2.0-flash", "gemini-1.5-flash"]:
+                try:
+                    response = self.gemini_client.models.generate_content(
+                        model=model_name,
+                        contents=prompt
+                    )
+                    if response and response.text:
+                        resp_text = response.text.strip()
+                        # Post-check safety guardrail: Redact if any accidental secret token is caught
+                        if any(s in resp_text.lower() for s in ["adminpass", "avani2026", "gemini_api_key="]):
+                            resp_text = "🔒 **Security Notice:** Content redacted to comply with credential protection policies."
+                        return {
+                            "status": "success",
+                            "response": resp_text,
+                            "model": f"Vertex AI Gemini ({model_name})",
+                            "sources": ["Google GenAI Live SDK", "Avani Albedo System Context"]
+                        }
+                except Exception as e:
+                    logger.warning(f"Live Gemini Help Bot call to {model_name} failed ({e}).")
 
-        # 4. RESILIENT KNOWLEDGE BASE FALLBACK
+        # 4. RESILIENT KNOWLEDGE BASE & TELEMETRY FALLBACK
         return self._generate_knowledge_base_answer(clean_query, city)
 
     def _generate_knowledge_base_answer(self, query: str, city: str) -> Dict[str, Any]:
         """Matches query against the extensible knowledge base loaded from app/data/help_bot_knowledge.json."""
         q_lower = query.lower()
-        topics = self.knowledge.get("topics", {})
 
+        # A. Key Configuration Inquiries
+        if any(w in q_lower for w in ["gemini key", "api key", "update key", "enter key", "configure key"]) and \
+           any(w in q_lower for w in ["where", "how", "update", "set", "enter", "configure"]):
+            topic = self.knowledge.get("topics", {}).get("gemini_api_key_configuration")
+            if topic:
+                return {
+                    "status": "success",
+                    "response": topic.get("content", ""),
+                    "model": "Avani Project Help Bot (Admin Knowledge)",
+                    "sources": ["Admin Settings Guide", "app/data/help_bot_knowledge.json"]
+                }
+
+        # B. Common Greetings / Who Are You
+        greeting_signals = ["hello", "hi", "hey", "who are you", "what can you do", "who is avani", "greetings"]
+        is_greeting = any(re.search(rf"\b{re.escape(g)}\b", q_lower) for g in greeting_signals)
+        if is_greeting and len(q_lower.split()) <= 8:
+            intro = f"""### 👋 Welcome to Avani Albedo Help Bot!
+I am your dedicated AI climate copilot for **{city}** and metropolitan regions globally.
+
+#### 💡 How can I help you today?
+- 🛰️ **Satellite Telemetry:** Ask *"How do you measure Land Surface Temperature and NDVI?"*
+- 🌡️ **Dual Temperature Modes:** Ask *"Explain Surface Temp vs Ambient Air Temp"*
+- 🪓 **Trees Cut Down:** Ask *"How are trees cut down calculated?"*
+- 🛠️ **Climate Interventions:** Ask *"What are the 4 climate interventions and unit costs?"*
+- ⚙️ **Optimization Engine:** Ask *"How does Google OR-Tools optimize the budget?"*
+- 📊 **HVI Scoring:** Ask *"What is the 6-factor HVI formula?"*
+- 🔑 **API Key Configuration:** Ask *"Where can I update the Gemini key?"*"""
+            return {
+                "status": "success",
+                "response": intro,
+                "model": "Avani Project Help Bot (Assistant Engine)",
+                "sources": ["Avani Albedo Assistant", "app/data/help_bot_knowledge.json"]
+            }
+
+        # C. City-Specific Telemetry Queries (e.g. "tell me about Nagpur", "how hot is Mumbai")
+        try:
+            from app.data.cities_heat_data import CITIES_REGISTRY, get_climate_cells_for_city
+            matched_city = None
+            for reg_city in CITIES_REGISTRY.keys():
+                if reg_city.lower() in q_lower:
+                    matched_city = reg_city
+                    break
+
+            if matched_city:
+                cells = get_climate_cells_for_city(matched_city)
+                if cells:
+                    avg_lst = round(sum(c.lst for c in cells) / len(cells), 1)
+                    max_lst = round(max(c.lst for c in cells), 1)
+                    avg_ndvi = round(sum(c.ndvi for c in cells) / len(cells), 2)
+                    critical_wards = [c.name for c in cells if c.lst >= 42.0 or (hasattr(c, "hvi_score") and c.hvi_score >= 70)]
+                    hotspots_str = ", ".join(critical_wards[:3]) if critical_wards else cells[0].name
+                    city_resp = f"""### 🏙️ Microclimate Analysis: {matched_city}
+
+- **Average Land Surface Temperature (LST):** **{avg_lst}°C** (Peak thermal hotspot: **{max_lst}°C**)
+- **Vegetation Density (NDVI):** **{avg_ndvi}** (Indicates substantial urban canopy deficit)
+- **High-Risk Priority Wards:** {hotspots_str}
+- **Recommended Interventions:** Prioritize **Zero-Soil High-Albedo Cool Roofs (SRI ≥ 85%)** on dense commercial/industrial roofs, and deploy **Urban Tree Canopies** in wards with available permeable soil (16 m² root space constraint).
+
+*💡 Select **{matched_city}** in the top navigation bar to run the live OR-Tools optimizer for this city!*"""
+                    return {
+                        "status": "success",
+                        "response": city_resp,
+                        "model": "Avani Project Help Bot (GIS Telemetry Engine)",
+                        "sources": [f"{matched_city} Earth Observation Telemetry", "Landsat 8/9 TIRS & Sentinel-2 MSI"]
+                    }
+        except Exception as city_err:
+            logger.debug(f"City telemetry lookup skipped: {city_err}")
+
+        # D. Keyword & Token Matching Across Knowledge Topics
+        topics = self.knowledge.get("topics", {})
         best_topic = None
         best_score = 0
 
+        # Extract meaningful query tokens
+        stop_words = {"the", "is", "at", "which", "on", "a", "an", "do", "how", "what", "tell", "me", "about", "can", "you", "and", "or", "in", "for", "to", "of", "with"}
+        q_tokens = [w for w in re.findall(r"\w+", q_lower) if len(w) > 2 and w not in stop_words]
+
         for key, topic in topics.items():
             keywords = topic.get("keywords", [])
-            score = sum(1 for kw in keywords if kw.lower() in q_lower)
+            score = 0
+            for kw in keywords:
+                kw_low = kw.lower()
+                # Exact phrase match gets high weight
+                if kw_low in q_lower:
+                    score += 4
+                # Word-token overlap gets 1 point
+                else:
+                    for t in q_tokens:
+                        if t in kw_low:
+                            score += 1
             if score > best_score:
                 best_score = score
                 best_topic = topic
 
-        if best_topic and best_score > 0:
+        if best_topic and best_score >= 2:
             return {
                 "status": "success",
                 "response": best_topic.get("content", ""),
@@ -245,7 +350,7 @@ USER QUESTION:
                 "sources": [best_topic.get("title", "Project Knowledge"), "app/data/help_bot_knowledge.json"]
             }
 
-        # General project overview answer
+        # E. General project overview answer
         general_answer = f"""### 🌍 Avani Albedo: Prescriptive Climate Resilience Engine
 
 **Avani Albedo** is an agentic urban-climate decision platform that models, calculates, and prescribes budget-constrained interventions to counter Urban Heat Islands (UHI) in **{city}** and metropolitan regions globally.

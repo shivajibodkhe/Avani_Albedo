@@ -165,7 +165,7 @@ def get_system_status():
         mode="Production Cloud Ready",
         gcp_project=settings.GCP_PROJECT_ID,
         gemini_connected=True,
-        gemini_model="Vertex AI Gemini 2.5 Flash",
+        gemini_model="Vertex AI Gemini 2.0 Flash",
         earth_engine_status=earth_engine_service.get_status(),
         bigquery_status="Ready (avani_climate GEOGRAPHY schema)",
         firestore_status=firestore_service.get_status(),
