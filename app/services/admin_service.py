@@ -1,37 +1,48 @@
 import os
 import time
+import json
 import logging
+from pathlib import Path
 from typing import Dict, Any, List, Optional
 from app.config import settings
+from app.services.firestore_service import firestore_service
 
 logger = logging.getLogger("avani_albedo.admin")
 
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+USERS_FILE = DATA_DIR / "registered_users.json"
+ALERTS_FILE = DATA_DIR / "registration_alerts.json"
+
+DEFAULT_USERS: Dict[str, Dict[str, Any]] = {
+    "srbodkhe@gmail.com": {
+        "email": "srbodkhe@gmail.com",
+        "role": "Super Admin",
+        "status": "Active",
+        "created_at": time.time() - 86400 * 5,
+        "last_active": time.time(),
+        "provider": "google/admin",
+        "login_count": 29
+    },
+    "judges": {
+        "email": "judges",
+        "role": "Judge / Evaluator",
+        "status": "Active",
+        "created_at": time.time() - 86400 * 2,
+        "last_active": time.time() - 3600,
+        "provider": "credentials",
+        "login_count": 12
+    }
+}
+
 class AdminService:
     def __init__(self):
-        # 1. Registered Users Store
-        self._users: Dict[str, Dict[str, Any]] = {
-            "srbodkhe@gmail.com": {
-                "email": "srbodkhe@gmail.com",
-                "role": "Super Admin",
-                "status": "Active",
-                "created_at": time.time() - 86400 * 5,
-                "last_active": time.time(),
-                "provider": "google/admin",
-                "login_count": 28
-            },
-            "judges": {
-                "email": "judges",
-                "role": "Judge / Evaluator",
-                "status": "Active",
-                "created_at": time.time() - 86400 * 2,
-                "last_active": time.time() - 3600,
-                "provider": "credentials",
-                "login_count": 12
-            }
-        }
-
-        # 2. Alerts / Registration Requests Store
+        # 1. Registered Users Store & Alerts Store
+        self._users: Dict[str, Dict[str, Any]] = {}
         self._alerts: List[Dict[str, Any]] = []
+
+        # 2. Load from Persistent Storage (Firestore / Local JSON)
+        self._load_users_from_storage()
+        self._load_alerts_from_storage()
 
         # 3. API Quotas & Usage Tracking
         self._quotas: Dict[str, Any] = {
@@ -57,6 +68,112 @@ class AdminService:
             }
         }
 
+    # ================= PERSISTENCE HELPERS (FIRESTORE & LOCAL JSON) =================
+    def _load_users_from_storage(self):
+        """Loads users from Firestore (or local JSON fallback), ensuring default admin/judges exist."""
+        loaded = False
+        # Try Firestore first
+        if firestore_service.is_connected and firestore_service.client:
+            try:
+                docs = firestore_service.client.collection("avani_users").stream()
+                for doc in docs:
+                    data = doc.to_dict()
+                    if "email" in data:
+                        clean = data["email"].strip().lower()
+                        self._users[clean] = data
+                if self._users:
+                    loaded = True
+                    logger.info(f"Loaded {len(self._users)} users from Firestore.")
+            except Exception as e:
+                logger.warning(f"Failed to load users from Firestore: {e}")
+
+        # Fallback to local JSON file
+        if not loaded and USERS_FILE.exists():
+            try:
+                with open(USERS_FILE, "r") as f:
+                    file_users = json.load(f)
+                    for clean, u in file_users.items():
+                        self._users[clean] = u
+                logger.info(f"Loaded {len(self._users)} users from local JSON file.")
+                loaded = True
+            except Exception as e:
+                logger.warning(f"Failed to read users from {USERS_FILE}: {e}")
+
+        # Always guarantee default super admin and judges are present
+        for email, default_data in DEFAULT_USERS.items():
+            if email not in self._users:
+                self._users[email] = default_data
+                self._persist_user(default_data)
+
+        # Mirror to local JSON
+        self._save_users_to_file()
+
+    def _persist_user(self, user: Dict[str, Any]):
+        """Persists a single user to Firestore and local JSON."""
+        clean = user["email"].strip().lower()
+        self._users[clean] = user
+        if firestore_service.is_connected and firestore_service.client:
+            try:
+                firestore_service.client.collection("avani_users").document(clean).set(user)
+            except Exception as e:
+                logger.warning(f"Failed to persist user {clean} to Firestore: {e}")
+        self._save_users_to_file()
+
+    def _remove_user_from_db(self, email: str):
+        """Removes a user from Firestore and local JSON."""
+        clean = email.strip().lower()
+        if clean in self._users:
+            del self._users[clean]
+        if firestore_service.is_connected and firestore_service.client:
+            try:
+                firestore_service.client.collection("avani_users").document(clean).delete()
+            except Exception as e:
+                logger.warning(f"Failed to delete user {clean} from Firestore: {e}")
+        self._save_users_to_file()
+
+    def _save_users_to_file(self):
+        """Saves current in-memory user map to local JSON file."""
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            with open(USERS_FILE, "w") as f:
+                json.dump(self._users, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to write users to {USERS_FILE}: {e}")
+
+    def _load_alerts_from_storage(self):
+        """Loads registration alerts from Firestore (or local JSON fallback)."""
+        loaded = False
+        if firestore_service.is_connected and firestore_service.client:
+            try:
+                docs = firestore_service.client.collection("avani_alerts").order_by("timestamp", direction="DESCENDING").stream()
+                self._alerts = [d.to_dict() for d in docs]
+                if self._alerts:
+                    loaded = True
+                    logger.info(f"Loaded {len(self._alerts)} alerts from Firestore.")
+            except Exception as e:
+                logger.warning(f"Failed to load alerts from Firestore: {e}")
+
+        if not loaded and ALERTS_FILE.exists():
+            try:
+                with open(ALERTS_FILE, "r") as f:
+                    self._alerts = json.load(f)
+            except Exception as e:
+                logger.warning(f"Failed to load alerts from {ALERTS_FILE}: {e}")
+
+    def _persist_alert(self, alert: Dict[str, Any]):
+        """Persists an alert to Firestore and local JSON."""
+        if firestore_service.is_connected and firestore_service.client:
+            try:
+                firestore_service.client.collection("avani_alerts").document(alert["id"]).set(alert)
+            except Exception as e:
+                logger.warning(f"Failed to persist alert {alert.get('id')} to Firestore: {e}")
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            with open(ALERTS_FILE, "w") as f:
+                json.dump(self._alerts, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Failed to write alerts to {ALERTS_FILE}: {e}")
+
     # ================= USER MANAGEMENT =================
     def list_users(self) -> List[Dict[str, Any]]:
         return list(self._users.values())
@@ -70,6 +187,7 @@ class AdminService:
             self._users[clean]["status"] = status
             if status == "Active" and (self._users[clean].get("role", "").startswith("Pending") or default_role):
                 self._users[clean]["role"] = default_role or "Municipal Planner"
+            self._persist_user(self._users[clean])
             logger.info(f"Updated user {clean} status to {status} with role {self._users[clean].get('role')}")
             return True
         return False
@@ -79,6 +197,7 @@ class AdminService:
         clean = email.strip().lower()
         if clean in self._users:
             self._users[clean]["role"] = role
+            self._persist_user(self._users[clean])
             logger.info(f"Admin promoted user {clean} to role: {role}")
             return True
         return False
@@ -88,6 +207,7 @@ class AdminService:
         if clean in self._users:
             self._users[clean]["last_active"] = time.time()
             self._users[clean]["login_count"] = self._users[clean].get("login_count", 0) + 1
+            self._persist_user(self._users[clean])
             return self._users[clean]
 
         user = {
@@ -99,7 +219,7 @@ class AdminService:
             "provider": provider,
             "login_count": 1
         }
-        self._users[clean] = user
+        self._persist_user(user)
         return user
 
     def delete_user(self, email: str) -> bool:
@@ -107,9 +227,26 @@ class AdminService:
         if clean == "srbodkhe@gmail.com":
             return False # Protect super admin
         if clean in self._users:
-            del self._users[clean]
+            self._remove_user_from_db(clean)
             return True
         return False
+
+    def cleanup_user(self, email: str):
+        """Helper to cleanly purge a test/temporary user and all associated alerts."""
+        clean = email.strip().lower()
+        self.delete_user(clean)
+        self._alerts = [a for a in self._alerts if a.get("user_email") != clean]
+        if firestore_service.is_connected and firestore_service.client:
+            try:
+                for doc in firestore_service.client.collection("avani_alerts").where("user_email", "==", clean).stream():
+                    doc.reference.delete()
+            except Exception as e:
+                logger.warning(f"Failed to delete alerts from Firestore: {e}")
+        try:
+            with open(ALERTS_FILE, "w") as f:
+                json.dump(self._alerts, f, indent=2)
+        except Exception:
+            pass
 
     def reset_user_password(self, email: str, new_password: str) -> bool:
         """Allows super admins to reset the password for judges or any user."""
@@ -125,6 +262,7 @@ class AdminService:
             
         if clean in self._users:
             self._users[clean]["password"] = clean_pw
+            self._persist_user(self._users[clean])
             logger.info(f"Admin reset password for user {clean}")
             return True
             
@@ -149,6 +287,7 @@ class AdminService:
             "message": details or f"User {clean} requested access via Google account. Needs Admin approval."
         }
         self._alerts.append(alert)
+        self._persist_alert(alert)
         # Add to users as Pending
         self.add_or_update_user(clean, role="Pending Approval", status="Pending", provider="google")
         logger.warning(f"SECURITY ALERT: Access request by {clean}. Alert logged for admin approval.")
@@ -163,6 +302,7 @@ class AdminService:
                 elif action == "reject":
                     alert["status"] = "rejected"
                     self.update_user_status(alert["user_email"], "Suspended")
+                self._persist_alert(alert)
                 return True
         return False
 

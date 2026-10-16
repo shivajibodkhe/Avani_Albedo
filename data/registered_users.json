@@ -1,0 +1,20 @@
+{
+  "judges": {
+    "email": "judges",
+    "role": "Judge / Evaluator",
+    "provider": "credentials",
+    "status": "Active",
+    "created_at": 1791964004.5122712,
+    "login_count": 12,
+    "last_active": 1792133204.5122712
+  },
+  "srbodkhe@gmail.com": {
+    "email": "srbodkhe@gmail.com",
+    "role": "Super Admin",
+    "provider": "google/admin",
+    "status": "Active",
+    "created_at": 1791704804.512269,
+    "login_count": 29,
+    "last_active": 1792136804.51227
+  }
+}

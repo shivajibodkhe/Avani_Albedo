@@ -137,6 +137,9 @@ def test_api_auth():
     })
 
 def test_firebase_auth_and_admin_portal():
+    from app.services.admin_service import admin_service
+    admin_service.cleanup_user("new.evaluator.test@gmail.com")
+
     # 1. Unregistered user attempts Google login -> Triggers 403 & Admin Alert
     res_unreg = client.post("/api/auth/firebase-login", json={
         "email": "new.evaluator.test@gmail.com",
@@ -206,6 +209,9 @@ def test_firebase_auth_and_admin_portal():
     })
     assert res_sett.status_code == 200
     assert res_sett.json()["config"]["gcp_project_id"] == "genai-2026-custom"
+
+    # Cleanup test user from persistent storage
+    admin_service.cleanup_user("new.evaluator.test@gmail.com")
 
 def test_api_geographic_hierarchy():
     res = client.get("/api/geography/countries-and-cities")
