@@ -310,6 +310,9 @@ function initEventHandlers() {
       btn.classList.add('active');
       const pane = document.getElementById(btn.dataset.tab);
       if (pane) pane.classList.add('active');
+      if (btn.dataset.tab === 'admin-tab-satellite') {
+        populateAdminSatDropdowns();
+      }
     });
   });
 
@@ -800,6 +803,7 @@ async function loadAdminDashboard() {
     renderAdminUsers(data.users || []);
     renderAdminQuotas(data.quotas || {});
     populateAdminSettings(data.config || {});
+    populateAdminSatDropdowns();
   } catch (err) {
     console.error("Failed loading admin dashboard", err);
   }
@@ -1006,11 +1010,48 @@ window.resolveAdminAlert = async function(alertId, action) {
   }
 };
 
+function populateAdminSatDropdowns() {
+  const satCountrySelect = document.getElementById('admin-sat-country');
+  if (!satCountrySelect) return;
+
+  if (geographicHierarchy && geographicHierarchy.countries && geographicHierarchy.countries.length > 0) {
+    const currentVal = satCountrySelect.value || "India";
+    satCountrySelect.innerHTML = geographicHierarchy.countries.map(c => 
+      `<option value="${c.country}" ${c.country.toLowerCase() === currentVal.toLowerCase() ? "selected" : ""}>${c.flag || "🌍"} ${c.country}</option>`
+    ).join('');
+  }
+  
+  onAdminSatCountryChanged(satCountrySelect.value);
+}
+
 function onAdminSatCountryChanged(country) {
   const citySelect = document.getElementById('admin-sat-city');
   if (!citySelect) return;
-  const citiesByCountry = {
-    "India": [
+
+  const targetCountry = (country || "India").trim().toLowerCase();
+
+  // If geographicHierarchy is loaded, use it directly (matches country name or standard aliases)
+  if (geographicHierarchy && geographicHierarchy.countries) {
+    const countryObj = geographicHierarchy.countries.find(c => {
+      const cName = c.country.toLowerCase();
+      return cName === targetCountry || 
+             (targetCountry === 'uae' && cName.includes('emirates')) ||
+             (targetCountry === 'usa' && cName.includes('states')) ||
+             (targetCountry === 'uk' && cName.includes('kingdom'));
+    });
+
+    if (countryObj && countryObj.cities && countryObj.cities.length > 0) {
+      citySelect.innerHTML = countryObj.cities.map(ct => {
+        const count = ct.wards_count || (ct.wards ? ct.wards.length : 0);
+        return `<option value="${ct.key}">${ct.name} (${count} Wards)</option>`;
+      }).join('');
+      return;
+    }
+  }
+
+  // Fallback map strictly grouped by country
+  const fallbackMap = {
+    "india": [
       { name: "Bengaluru (12 Wards)", val: "Bengaluru" },
       { name: "Mumbai MMR (6 Wards)", val: "Mumbai" },
       { name: "Delhi NCR (6 Wards)", val: "Delhi" },
@@ -1021,18 +1062,30 @@ function onAdminSatCountryChanged(country) {
       { name: "Ahmedabad AMC (4 Wards)", val: "Ahmedabad" },
       { name: "Jaipur JDA (3 Wards)", val: "Jaipur" }
     ],
-    "UAE": [
-      { name: "Dubai Urban (3 Wards)", val: "Dubai" },
-      { name: "Abu Dhabi (2 Wards)", val: "Abu Dhabi" }
+    "united arab emirates": [
+      { name: "Dubai Urban Corridor (3 Wards)", val: "Dubai" }
     ],
-    "USA": [
-      { name: "Phoenix Metro (3 Wards)", val: "Phoenix" },
-      { name: "Las Vegas Valley (3 Wards)", val: "Las Vegas" },
-      { name: "Austin Capital (2 Wards)", val: "Austin" }
+    "uae": [
+      { name: "Dubai Urban Corridor (3 Wards)", val: "Dubai" }
+    ],
+    "singapore": [
+      { name: "Singapore Island State (3 Wards)", val: "Singapore" }
+    ],
+    "united kingdom": [
+      { name: "Greater London Heat Basin (2 Wards)", val: "London" }
+    ],
+    "uk": [
+      { name: "Greater London Heat Basin (2 Wards)", val: "London" }
+    ],
+    "united states": [
+      { name: "Phoenix Metro (2 Wards)", val: "Phoenix" }
+    ],
+    "usa": [
+      { name: "Phoenix Metro (2 Wards)", val: "Phoenix" }
     ]
   };
 
-  const list = citiesByCountry[country] || citiesByCountry["India"];
+  const list = fallbackMap[targetCountry] || fallbackMap["india"];
   citySelect.innerHTML = list.map(c => `<option value="${c.val}">${c.name}</option>`).join('');
 }
 
