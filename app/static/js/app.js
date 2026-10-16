@@ -1292,6 +1292,11 @@ async function loadSystemStatus() {
     const data = await res.json();
     const statusText = document.getElementById('system-status-text');
     statusText.textContent = `Active • ${data.gemini_model} • ${data.cells_loaded} Wards`;
+    if (data.version) {
+      document.querySelectorAll('.app-version-badge').forEach(el => {
+        el.textContent = `v${data.version}`;
+      });
+    }
   } catch (err) {
     console.error("Status load failed", err);
     document.getElementById('system-status-text').textContent = "Offline Fallback Mode";

@@ -69,6 +69,25 @@ body.dark-theme {
   background: linear-gradient(135deg, #38bdf8 0%, #10b981 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-version-badge {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  -webkit-text-fill-color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  margin-left: 6px;
+  display: inline-block;
+  line-height: normal;
 }
 
 .brand-subtitle {
