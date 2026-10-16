@@ -1,13 +1,48 @@
 import os
 import time
+import json
 import secrets
+import logging
+from pathlib import Path
 from typing import Dict, Any, Optional, List
 from app.config import settings
 
+logger = logging.getLogger("avani_albedo.auth")
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
+SESSIONS_FILE = DATA_DIR / "active_sessions.json"
+
 class AuthService:
     def __init__(self):
-        # In-memory session store: token -> { email, expires_at }
+        # Persistent session store: token -> { email, role, expires_at }
         self._active_sessions: Dict[str, Dict[str, Any]] = {}
+        self._load_sessions_from_storage()
+
+    def _load_sessions_from_storage(self):
+        """Loads sessions from local JSON file so server reloads do not log out users."""
+        if SESSIONS_FILE.exists():
+            try:
+                with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    now = time.time()
+                    self._active_sessions = {
+                        k: v for k, v in data.items() if v.get("expires_at", 0) > now
+                    }
+                logger.info(f"Loaded {len(self._active_sessions)} active sessions from persistent storage.")
+            except Exception as e:
+                logger.warning(f"Could not load sessions from file: {e}")
+
+    def _save_sessions_to_storage(self):
+        """Saves active sessions to persistent file."""
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            now = time.time()
+            clean_sessions = {
+                k: v for k, v in self._active_sessions.items() if v.get("expires_at", 0) > now
+            }
+            with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
+                json.dump(clean_sessions, f, indent=2)
+        except Exception as e:
+            logger.warning(f"Could not save sessions to file: {e}")
         
     @property
     def is_auth_enabled(self) -> bool:
@@ -57,6 +92,7 @@ class AuthService:
         }
         
         self._active_sessions[token] = user_info
+        self._save_sessions_to_storage()
         return {
             "token": token,
             "email": user_info["email"],
@@ -72,6 +108,7 @@ class AuthService:
             "role": role,
             "expires_at": expires_at
         }
+        self._save_sessions_to_storage()
         return token
 
     def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
@@ -84,6 +121,7 @@ class AuthService:
             
         if time.time() > session["expires_at"]:
             del self._active_sessions[token]
+            self._save_sessions_to_storage()
             return None
             
         return session
@@ -91,5 +129,6 @@ class AuthService:
     def logout_token(self, token: str):
         if token in self._active_sessions:
             del self._active_sessions[token]
+            self._save_sessions_to_storage()
 
 auth_service = AuthService()

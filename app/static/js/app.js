@@ -1488,7 +1488,23 @@ async function runAvaniAgent() {
       })
     });
     
+    if (res.status === 401) {
+      localStorage.removeItem('avani_token');
+      localStorage.removeItem('avani_email');
+      alert("🔒 Session Expired: Please log in with your Judge or Admin credentials to generate the climate resilience action plan.");
+      showLandingGateway();
+      return;
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Server error (${res.status})`);
+    }
+
     const plan = await res.json();
+    if (!plan || !plan.scenario_result) {
+      throw new Error("Invalid action plan response format.");
+    }
     currentActionPlan = plan;
     currentScenarioResult = plan.scenario_result;
     
@@ -1504,7 +1520,7 @@ async function runAvaniAgent() {
     }
   } catch (err) {
     console.error("Action plan generation error:", err);
-    alert("Could not generate action plan. Check console for details.");
+    alert(`Could not generate action plan: ${err.message || err}`);
   } finally {
     btn.disabled = false;
     spinner.classList.add('hidden');
@@ -2171,14 +2187,20 @@ function renderWardMicroChart(cell) {
 
 // ================= RESULTS RENDERING =================
 function updateKpiCards(scenario) {
-  document.getElementById('kpi-cooling').textContent = `-${scenario.avg_temp_reduction_c.toFixed(2)} °C`;
-  document.getElementById('kpi-max-cooling').textContent = `Peak: -${scenario.max_temp_reduction_c.toFixed(2)} °C in Hotspots`;
-  document.getElementById('kpi-beneficiaries').textContent = scenario.total_beneficiaries.toLocaleString();
-  document.getElementById('kpi-budget').textContent = formatCurrency(scenario.budget_spent_inr);
+  if (!scenario) return;
+  const avg = typeof scenario.avg_temp_reduction_c === 'number' ? scenario.avg_temp_reduction_c.toFixed(2) : '0.00';
+  const peak = typeof scenario.max_temp_reduction_c === 'number' ? scenario.max_temp_reduction_c.toFixed(2) : '0.00';
+  document.getElementById('kpi-cooling').textContent = `-${avg} °C`;
+  document.getElementById('kpi-max-cooling').textContent = `Peak: -${peak} °C in Hotspots`;
+  document.getElementById('kpi-beneficiaries').textContent = (scenario.total_beneficiaries || 0).toLocaleString();
+  document.getElementById('kpi-budget').textContent = formatCurrency(scenario.budget_spent_inr || 0);
   
-  const pct = ((scenario.budget_spent_inr / scenario.total_budget_inr) * 100).toFixed(1);
-  document.getElementById('kpi-budget-pct').textContent = `${pct}% of ${formatCurrency(scenario.total_budget_inr)} target`;
-  document.getElementById('kpi-exposure').textContent = `${scenario.heat_exposure_reduction_pct.toFixed(1)}%`;
+  const total = scenario.total_budget_inr || 1;
+  const spent = scenario.budget_spent_inr || 0;
+  const pct = ((spent / total) * 100).toFixed(1);
+  document.getElementById('kpi-budget-pct').textContent = `${pct}% of ${formatCurrency(total)} target`;
+  const exposure = typeof scenario.heat_exposure_reduction_pct === 'number' ? scenario.heat_exposure_reduction_pct.toFixed(1) : '0.0';
+  document.getElementById('kpi-exposure').textContent = `${exposure}%`;
 }
 
 function renderActionPlan(plan) {

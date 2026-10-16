@@ -30,3 +30,4 @@ out/
 *.swp
 ~$*
 .pytest_cache/
+data/active_sessions.json
