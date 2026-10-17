@@ -36,6 +36,7 @@ data/active_sessions.json
 submission_prep/*.mp4
 submission_prep/*.mov
 submission_prep/*.webm
+submission_prep/*.webp
 submission_prep/*.avi
 submission_prep/*.zip
 submission_prep/media/
