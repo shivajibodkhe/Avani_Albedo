@@ -10,7 +10,7 @@ Welcome to the **Avani Albedo** Project Wiki.
 
 | Wiki Section | Description |
 | :--- | :--- |
-| 🏛️ **[[Architecture & GCP Infrastructure]]** | Cloud Run, BigQuery, Firestore, Vertex AI / Gemini 2.5 Flash, Cloud Storage |
+| 🏛️ **[[Architecture & GCP Infrastructure]]** | Cloud Run, BigQuery, Firestore, Gemini 2.0 Flash (Google AI SDK), Cloud Storage |
 | 🛰️ **[[Climate Datasets & BigQuery Pipeline]]** | 8 real climate datasets, ECMWF ERA5, Landsat/Sentinel, zero-cost batch staging |
 | 🧮 **[[Mathematical Optimizer & Heat Mitigation]]** | Google OR-Tools SCIP solver, albedo physics, cool roofs, tree canopy allocation |
 | 🔐 **[[Security & User Management]]** | Firebase Google 1-Click Auth, Judge bypass, Firestore live persistence |
@@ -30,9 +30,9 @@ Welcome to the **Avani Albedo** Project Wiki.
 
 ```
 Frontend: Vanilla HTML5 / Modern CSS Glassmorphism / Vanilla JS (ES6+) / Leaflet.js
-Backend:  FastAPI (Python 3.14) / Pydantic v2 / Uvicorn
+Backend:  FastAPI (Python 3.12) / Pydantic v2 / Uvicorn
 Solvers:  Google OR-Tools 9.10 (SCIP Mixed-Integer Linear Programming)
-AI / ML:  Google Gemini 2.5 Flash (via google-genai SDK)
+AI / ML:  Google Gemini 2.0 Flash (via google-genai SDK)
 GCP:      Cloud Run, Cloud Firestore Native, BigQuery, Cloud Storage (GCS)
 Auth:     Firebase Authentication + JWT Bearer Tokens
 ```

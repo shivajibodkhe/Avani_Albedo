@@ -154,8 +154,9 @@ Once the server is running, open your web browser:
 ### 🔑 Demo / Judge & Admin Login Credentials
 
 - **Judge / Evaluator Access:**
-  - **Allowed Emails:** `srbodkhe@gmail.com`, `judge@hackathon.com`, `evaluator@ai-builder.cup`
-  - **Password:** `avani2026`
+  - **Username / Email:** `judges` (or `srbodkhe@gmail.com`)
+  - **Password:** `AvaniAlbedo12042026#`
+  - *(or click "⚡ 1-Click Judge / Evaluator Access" on the landing page for instant access)*
 - **Admin Portal Access** (via top-right **🔒 Admin Portal** button):
   - **Email:** `admin@avani.eco`
   - **Password:** `AdminPass123!`
@@ -203,8 +204,8 @@ gcloud services enable \
 
 ### 2. IAM Roles Required
 If running through a Service Account or developer Google account:
-- `roles/aiplatform.user` (Vertex AI Gemini invocation)
-- `roles/bigquery.dataEditor` & `roles/bigquery.jobUser` (Spatial analytics)
+- `roles/aiplatform.user` (Optional for Vertex AI; default runtime uses Gemini Developer API key via `GEMINI_API_KEY`)
+- `roles/bigquery.dataEditor` & `roles/bigquery.jobUser` (Spatial staging analytics)
 - `roles/run.developer` (Cloud Run container hosting)
 
 ### 3. Local CLI Authentication

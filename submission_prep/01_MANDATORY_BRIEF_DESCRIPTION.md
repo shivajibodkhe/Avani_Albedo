@@ -62,5 +62,5 @@ While conventional GIS dashboards merely show passive heat maps, Avani Albedo co
 | **GitHub Repository** | `https://github.com/shivajibodkhe/Avani_Albedo` |
 | **Live Deployed Prototype Link** | `https://avani-albedo-hbxrfbol2a-el.a.run.app` |
 | **Judge Access Credentials** | Email/Username: `judges` &bull; Password: `AvaniAlbedo12042026#` *(or Google 1-Click)* |
-| **Key Technologies** | Gemini 2.0 Flash, Google Cloud Run, Cloud Firestore, Firebase, Google Earth Engine, BigQuery, Google OR-Tools |
+| **Key Technologies** | Gemini 2.0 Flash (Google AI), Google Cloud Run, Cloud Firestore, Firebase, Calibrated Satellite Composites, BigQuery Staging, Google OR-Tools |
 

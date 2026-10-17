@@ -31,7 +31,7 @@ This guide provides end-to-end infrastructure specifications, architectural blue
            |                                                               |
            v                                                               v
 +---------------------------------------+              +---------------------------------------+
-|    Cloud Firestore (Native Mode)      |              |   Vertex AI / Gemini 2.5 Flash API    |
+|    Cloud Firestore (Native Mode)      |              |   Gemini 2.0 Flash (Google AI SDK)    |
 | - avani_scenarios (Plan Archives)     |              | - Spatial Reasoning & Plan Synthesis  |
 | - avani_audit (Administrative Logs)   |              | - Thermodynamic Rationale Generation  |
 +---------------------------------------+              +---------------------------------------+
@@ -48,7 +48,7 @@ Because Avani Albedo is built with a serverless, on-demand design, running it on
 | **Cloud Run** | 1 vCPU, 1 GiB RAM, min-instances=0 | **2 Million requests/month FREE** | **₹0.00** |
 | **Cloud Firestore** | Collections: `avani_scenarios`, `avani_audit` | **50,000 document reads/day, 20,000 writes/day FREE** | **₹0.00** |
 | **Firebase Hosting** | Static HTML/CSS/JS edge CDN | **10 GB storage, 360 MB/day transfer FREE** | **₹0.00** |
-| **Vertex AI / Gemini** | Gemini 2.5 Flash calls (~200 calls/day during demo) | Google AI Studio free tier / Vertex credits ($300 trial credits) | **₹0.00** |
+| **Gemini AI** | Gemini 2.0 Flash calls (~200 calls/day during demo) | Google AI Studio free tier / Developer API quota | **₹0.00** |
 | **Total Est. Cost** | — | — | **< ₹50 ($0.50)** |
 
 ---
@@ -67,7 +67,7 @@ chmod +x deploy_gcp.sh
 
 The script will automatically:
 1. Configure `gcloud` to your target project.
-2. Enable all required APIs (`run.googleapis.com`, `cloudbuild.googleapis.com`, `firestore.googleapis.com`, `aiplatform.googleapis.com`).
+2. Enable all required APIs (`run.googleapis.com`, `cloudbuild.googleapis.com`, `firestore.googleapis.com`, `secretmanager.googleapis.com`).
 3. Initialize Cloud Firestore in Native mode.
 4. Containerize the application and deploy it to **Cloud Run** with auto-scaling (0 to 10 instances).
 5. Output your **Live Cloud Run URL** (e.g., `https://avani-albedo-xxxxx-el.a.run.app`).
@@ -92,7 +92,6 @@ gcloud services enable \
     cloudbuild.googleapis.com \
     artifactregistry.googleapis.com \
     firestore.googleapis.com \
-    aiplatform.googleapis.com \
     secretmanager.googleapis.com
 ```
 
@@ -154,11 +153,11 @@ Once deployed, verify live health:
   ```json
   {
     "app_name": "Avani Albedo",
-    "version": "1.0.0",
+    "version": "1.1.3",
     "mode": "Production Cloud Ready",
     "gcp_project": "YOUR_PROJECT_ID",
     "gemini_connected": true,
-    "gemini_model": "Vertex AI Gemini 2.5 Flash",
+    "gemini_model": "Gemini 2.0 Flash",
     "earth_engine_status": "Ready",
     "bigquery_status": "Ready",
     "firestore_status": "Ready (Live)",

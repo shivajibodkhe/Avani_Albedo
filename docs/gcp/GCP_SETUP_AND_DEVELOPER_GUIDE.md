@@ -33,9 +33,9 @@ Avani Albedo is built with a cohesive Google Cloud native stack:
 | **Container Hosting** | **Google Cloud Run** | Fully managed serverless container hosting for the FastAPI & OR-Tools engine. |
 | **Operational Database** | **Google Cloud Firestore** | Stores generated climate action plans, ward allocations, and audit logs. |
 | **Web Hosting & Auth** | **Firebase Hosting & Auth** | CDN edge caching, custom domain, and secure administrative authentication. |
-| **AI Planning Agent** | **Vertex AI / Gemini 2.5 Flash** | Generates explainable executive briefings, physical rationales, and roadmaps. |
-| **Spatial Analytics** | **BigQuery (GEOGRAPHY)** | Stores urban grid cells, ward boundaries, and critical infrastructure assets. |
-| **Earth Observation** | **Google Earth Engine (GEE)** | Computes Land Surface Temp (Landsat 8/9), NDVI, NDBI, and Albedo composites. |
+| **AI Planning Agent** | **Gemini 2.0 Flash (Google AI)** | Generates explainable executive briefings, physical rationales, and roadmaps via Google GenAI SDK. |
+| **Spatial Analytics** | **BigQuery (Offline Staging Pipeline)** | Staging pipeline for urban grid cells, ward boundaries, and critical infrastructure assets loaded via batch loads (`bq load`). |
+| **Earth Observation** | **Calibrated Satellite Composites** | Radiometric Land Surface Temp (Landsat 8/9 Band 10), NDVI, NDBI, and Albedo composites derived from earth observation pipelines. |
 
 ---
 
@@ -243,7 +243,7 @@ python run.py
 - **API Status / Health Check:** `http://localhost:8000/api/status`
 
 ### Demo & Admin Credentials:
-- **Judge / Demo Login:** Email `srbodkhe@gmail.com` / Password `avani2026`
+- **Judge / Demo Login:** Username `judges` (or `srbodkhe@gmail.com`) / Password `AvaniAlbedo12042026#` (or click "⚡ 1-Click Judge / Evaluator Access")
 - **Admin Portal:** Email `admin@avani.eco` / Password `AdminPass123!`
 
 ### Running Automated Test Suite:
@@ -251,7 +251,7 @@ python run.py
 source .venv/bin/activate
 pytest -v
 ```
-All 16 unit & integration tests will execute in `< 5 seconds`.
+All 25 unit & integration tests will execute cleanly in `< 10 seconds`.
 
 ### Stopping the Local Server:
 Press `Ctrl + C` in your terminal.

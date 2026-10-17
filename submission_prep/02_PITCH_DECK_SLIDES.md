@@ -98,7 +98,7 @@
                                  │
                                  ▼
  ┌───────────────────────────────────────────────────────────────┐
- │            Vertex AI Gemini 2.0 Flash Agent                   │
+ │          Gemini 2.0 Flash Agent (Google AI SDK)               │
  │   Synthesizes Executive Brief, Thermodynamic Physics, & Phases│
  └───────────────────────────────┬───────────────────────────────┘
                                  │

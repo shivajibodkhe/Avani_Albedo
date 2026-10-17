@@ -2,7 +2,7 @@
 > **Saved on:** October 8, 2026  
 > **Repository:** `/Users/itsd-shivaji/Documents/Avani_Albedo_Dev`  
 > **Git Branch:** `main` (clean working directory, pushed to GitHub remote `origin/main`)  
-> **Status:** All 16 unit & integration tests passing (`16 passed in 3.8s`)
+> **Status:** All 25 unit & integration tests passing (`25 passed in <10s`)
 
 ---
 
@@ -42,8 +42,9 @@ python run.py
 
 ### 🔑 Demo & Admin Credentials
 - **Judge / Evaluator Login:**
-  - **Emails:** `srbodkhe@gmail.com`, `judge@hackathon.com`, `evaluator@ai-builder.cup`
-  - **Password:** `avani2026`
+  - **Username / Email:** `judges` (or `srbodkhe@gmail.com`)
+  - **Password:** `AvaniAlbedo12042026#`
+  - *(or click "⚡ 1-Click Judge / Evaluator Access" on the landing page)*
 - **Admin Portal Login** (Header top-right **🔒 Admin Portal**):
   - **Email:** `admin@avani.eco`
   - **Password:** `AdminPass123!`
@@ -126,7 +127,7 @@ Press **`Ctrl + C`** in your terminal.
 
 When you restart and resume, here are the next high-impact tasks we can tackle:
 1. **Cloud Run Deployment:** Follow [`PAID_GCP_HOSTING_AND_INFRA_GUIDE.md`](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/PAID_GCP_HOSTING_AND_INFRA_GUIDE.md) to deploy the app to your paid GCP project and get a public live URL.
-2. **Demo Video Recording / Presentation Deck:** Prepare slides and script highlighting the hackathon themes: *Sustainability, Climate Resilience, Google Gemini 2.5 Flash on Vertex AI, and Earth Engine integration*.
-3. **Live Vertex AI Tuning:** Test custom Gemini prompt engineering for localized city municipal policy briefs.
+2. **Demo Video Recording / Presentation Deck:** Prepare slides and script highlighting the hackathon themes: *Sustainability, Climate Resilience, Gemini 2.0 Flash (Google AI), and calibrated satellite telemetry*.
+3. **Gemini Prompt Engineering:** Test custom Gemini 2.0 Flash prompt templates for localized city municipal policy briefs.
 
 Everything is saved, committed, and safely pushed to your GitHub repository!

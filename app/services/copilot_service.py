@@ -132,7 +132,7 @@ class HelpBotService:
             return False
 
         sensitive_patterns = [
-            r"\b(password|passwords|adminpass|admin_pass|avani2026)\b",
+            r"\b(password|passwords|adminpass|admin_pass|avani2026|avanialbedo)\b",
             r"\b(give|tell|reveal|show|dump|print|leak|exfiltrate)\b.*(key|secret|credential|token|password)",
             r"\b(what\s+is\s+(the\s+)?(admin\s+)?password)\b",
             r"\b(give\s+me\s+the\s+gemini_api_key)\b",
@@ -231,12 +231,12 @@ USER QUESTION:
                     if response and response.text:
                         resp_text = response.text.strip()
                         # Post-check safety guardrail: Redact if any accidental secret token is caught
-                        if any(s in resp_text.lower() for s in ["adminpass", "avani2026", "gemini_api_key="]):
+                        if any(s in resp_text.lower() for s in ["adminpass", "avani2026", "avanialbedo", "gemini_api_key="]):
                             resp_text = "🔒 **Security Notice:** Content redacted to comply with credential protection policies."
                         return {
                             "status": "success",
                             "response": resp_text,
-                            "model": f"Vertex AI Gemini ({model_name})",
+                            "model": f"Gemini API ({model_name})",
                             "sources": ["Google GenAI Live SDK", "Avani Albedo System Context"]
                         }
                 except Exception as e:
