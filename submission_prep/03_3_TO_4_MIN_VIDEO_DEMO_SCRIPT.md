@@ -24,7 +24,7 @@
 ## 🎬 Word-for-Word Voiceover & Screen Execution (Timed to 180s)
 
 ### **[0:00 – 0:20] Segment 1: The Problem & Frictionless Authentication (20s)**
-* **On Screen:** Start on the landing gateway (`https://avani-albedo-hbxrfbol2a-el.a.run.app`). Show the title **"AVANI ALBEDO v1.1.3"** and the telemetry bar showing `Cloud Run (Sub-50ms SCIP)`. Enter username `judges` and password `AvaniAlbedo12042026#`, then click **Authenticate & Launch Engine**.
+* **On Screen:** Start on the landing gateway (`https://avani-albedo-hbxrfbol2a-el.a.run.app`). Show the title **"AVANI ALBEDO v1.1.4"** and the telemetry bar showing `Cloud Run (Sub-50ms SCIP)`. Enter username `judges` and password `AvaniAlbedo12042026#`, then click **Authenticate & Launch Engine**.
 * **Voiceover (Speak clearly and briskly):**
   > *"Hello judges! Welcome to Avani Albedo, built for the Google Cloud AI Builder Cup under the Sustainability & Social Impact track. Rapid urbanization causes surface temperatures in cities to exceed 42°C. While standard GIS dashboards merely display passive heat maps, Avani Albedo is a prescriptive resilience engine that computes mathematically optimal, budget-constrained interventions."*
 

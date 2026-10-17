@@ -3,7 +3,7 @@
 > **Challenge:** Google Cloud AI Builder Cup 2026  
 > **Track:** Sustainability & Social Impact  
 > **Tagline:** *Optimizing Albedo, Cooling the Earth.*  
-> **Project Version:** `v1.1.3` (Production Cloud Ready)  
+> **Project Version:** `v1.1.4` (Production Cloud Ready)  
 > **Live Deployed Prototype:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)  
 > **GitHub Repository:** [https://github.com/shivajibodkhe/Avani_Albedo](https://github.com/shivajibodkhe/Avani_Albedo)  
 

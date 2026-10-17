@@ -153,7 +153,7 @@ Once deployed, verify live health:
   ```json
   {
     "app_name": "Avani Albedo",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "mode": "Production Cloud Ready",
     "gcp_project": "YOUR_PROJECT_ID",
     "gemini_connected": true,
