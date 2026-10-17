@@ -69,7 +69,7 @@ Follow these sequential steps to evaluate all core innovations within 3 minutes:
    - Thermodynamic impact: Average temperature reduction (e.g., `-2.8°C`), surface albedo gain (`+0.19`), and population protected.
    - Spatial distribution points overlaid dynamically on the interactive map.
 
-### Step 4: Vertex AI & Gemini 2.0 Flash Executive Action Plan (2:00 - 2:45)
+### Step 4: Gemini 2.0 Flash (Google AI) Executive Action Plan (2:00 - 2:45)
 1. Under **Strategic Personas**, select an executive audience:
    - *Municipal Commissioner*
    - *Chief Public Health Officer*
@@ -106,7 +106,7 @@ To ensure 100% availability throughout the competition evaluation lifecycle, Ava
    │
    ├── Google OR-Tools (SCIP / MILP Solver) ── Sub-50ms deterministic execution
    │
-   ├── Vertex AI / Gemini 2.0 Flash Client ── Exponential backoff retry logic
+   ├── Gemini 2.0 Flash Client (Google GenAI SDK) ── Exponential backoff retry logic
    │
    └── Google Cloud Firestore (Native Mode)
          ├── avani_scenarios (Scenario plans & audit logs)

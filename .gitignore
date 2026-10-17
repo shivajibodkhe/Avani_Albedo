@@ -31,3 +31,11 @@ out/
 ~$*
 .pytest_cache/
 data/active_sessions.json
+
+# Media & presentation binary artifacts
+submission_prep/*.mp4
+submission_prep/*.mov
+submission_prep/*.webm
+submission_prep/*.avi
+submission_prep/*.zip
+submission_prep/media/

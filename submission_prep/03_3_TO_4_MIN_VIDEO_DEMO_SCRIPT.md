@@ -34,7 +34,7 @@
 * **On Screen:** Click **"Judges One-Click Access"** (or sign in with Google). The dashboard smoothly reveals the interactive dark-mode GIS map with color-coded ward polygons. Click on the **Peenya Industrial Area** polygon to open its popup.
 * **Voiceover:**
   > *"Logging in securely via Firebase Authentication, we enter the live city dashboard. Here, Bengaluru is mapped across 12 climate cells.*  
-  > *Our backend ingests multi-spectral Earth observations from NASA Landsat 8 and Sentinel-2 satellites. We calculate a normalized 6-factor Heat Vulnerability Index—combining surface temperature, vegetation deficit, concrete density, demographics, and proximity to hospitals and schools. Notice Peenya: marked critical red with an HVI of 80+ and 42.8°C surface temperature."*
+  > *Our backend leverages calibrated Landsat/Sentinel-2 composites to compute a normalized 6-factor Heat Vulnerability Index—combining Land Surface Temperature, vegetation deficit, concrete density, demographics, and proximity to hospitals and schools. Notice Peenya: marked critical red with an HVI of 80+ and 42.8°C surface temperature."*
 
 ---
 
@@ -46,10 +46,10 @@
 
 ---
 
-### **[1:45 – 2:20] Segment 4: Vertex AI & Gemini 2.0 Flash Planning Agent**
+### **[1:45 – 2:20] Segment 4: Gemini 2.0 Flash Planning Agent**
 * **On Screen:** The **Action Plan** tab appears. Highlight the glowing badge: **"Gemini 2.0 Flash"** and **"OR-Tools SCIP • 28ms"**. Scroll through the Executive Summary and the 3 implementation phases.
 * **Voiceover:**
-  > *"Immediately, Vertex AI powered by Gemini 2.0 Flash translates the mathematical allocations into an executive municipal plan.*  
+  > *"Immediately, Gemini 2.0 Flash powered by the Google GenAI SDK translates the mathematical allocations into an executive municipal plan.*  
   > *Gemini provides thermodynamic justifications, ranking interventions by cooling efficiency per rupee. It breaks the deployment into three actionable phases: Phase 1 Rapid Relief targeting cool roofs on public schools and transit hubs, Phase 2 Systematic Resilience deploying tensile shade and water kiosks, and Phase 3 Long-Term Transformation for native tree planting during monsoon seasons."*
 
 ---
@@ -71,9 +71,9 @@
 ---
 
 ### **[3:15 – 3:30] Segment 7: Google Cloud Architecture & Conclusion**
-* **On Screen:** Briefly show the **GCP Stack & Impact** modal highlighting Google Cloud Run, Vertex AI, Firestore, BigQuery, and Firebase. Show the live URL and GitHub repo link.
+* **On Screen:** Briefly show the **GCP Stack & Impact** modal highlighting Google Cloud Run, Gemini 2.0 Flash, Firestore, BigQuery, and Firebase. Show the live URL and GitHub repo link.
 * **Voiceover:**
-  > *"Avani Albedo is live, fully automated via CI/CD, and 100% powered by the Google Cloud ecosystem—Cloud Run, Vertex AI Gemini, Firestore, BigQuery, and Firebase. Thank you for evaluating Avani Albedo: Optimizing Albedo, Cooling the Earth!"*
+  > *"Avani Albedo is live, fully automated via CI/CD, and 100% powered by the Google Cloud ecosystem—Cloud Run, Gemini API, Firestore, BigQuery staging, and Firebase. Thank you for evaluating Avani Albedo: Optimizing Albedo, Cooling the Earth!"*
 
 ---
 

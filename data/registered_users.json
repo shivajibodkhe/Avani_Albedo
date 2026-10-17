@@ -1,20 +1,47 @@
 {
-  "judges": {
-    "email": "judges",
-    "role": "Judge / Evaluator",
-    "provider": "credentials",
+  "akshatha.r.prabhu@gmail.com": {
     "status": "Active",
+    "last_active": 1792167195.3794227,
+    "login_count": 2,
+    "role": "Super Admin",
+    "email": "akshatha.r.prabhu@gmail.com",
+    "created_at": 1792167127.2269502,
+    "provider": "google"
+  },
+  "anushadhananjayamurthy@gmail.com": {
+    "status": "Active",
+    "login_count": 4,
+    "last_active": 1792192963.7565148,
+    "role": "Super Admin",
+    "email": "anushadhananjayamurthy@gmail.com",
+    "created_at": 1792167779.317424,
+    "provider": "google"
+  },
+  "judges": {
     "created_at": 1791964004.5122712,
+    "last_active": 1792133204.5122712,
     "login_count": 12,
-    "last_active": 1792133204.5122712
+    "role": "Judge / Evaluator",
+    "email": "judges",
+    "status": "Active",
+    "provider": "credentials"
+  },
+  "niranchana.2001.17@gmail.com": {
+    "status": "Active",
+    "last_active": 1792210775.558961,
+    "login_count": 2,
+    "email": "niranchana.2001.17@gmail.com",
+    "role": "Super Admin",
+    "created_at": 1792167138.368934,
+    "provider": "google"
   },
   "srbodkhe@gmail.com": {
-    "email": "srbodkhe@gmail.com",
-    "role": "Super Admin",
-    "provider": "google/admin",
     "status": "Active",
+    "last_active": 1792168647.7766128,
+    "login_count": 35,
+    "role": "Super Admin",
+    "email": "srbodkhe@gmail.com",
     "created_at": 1791704804.512269,
-    "login_count": 29,
-    "last_active": 1792136804.51227
+    "provider": "google/admin"
   }
 }

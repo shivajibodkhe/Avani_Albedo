@@ -8,7 +8,7 @@
 > **Live Production URL:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)  
 > **Project Wiki:** [https://github.com/shivajibodkhe/Avani_Albedo/wiki](https://github.com/shivajibodkhe/Avani_Albedo/wiki)  
 > **CI/CD:** Automated GitHub Actions ➔ Google Cloud Run (`asia-south1`)  
-> **Test Suite:** 24/24 Tests Passing (100% Coverage)
+> **Test Suite:** 25/25 Tests Passing (100% Pass Rate)
 
 ---
 
@@ -27,16 +27,16 @@ For immediate testing of the live production deployment:
 Urban Heat Islands (UHI) disproportionately impact dense metropolitan centers, driving localized temperatures up by 4°C to 8°C above baseline. Traditional GIS platforms only map hotspots without prescribing actionable, budget-constrained solutions.
 
 **Avani Albedo** is an agentic urban-climate decision-support engine that combines:
-- **Satellite Multi-Spectral Intelligence:** Landsat 8/9 Thermal Infrared (LST), Sentinel-2 (NDVI, NDBI), and surface albedo reflectance.
+- **Satellite Multi-Spectral Intelligence:** Calibrated Landsat 8/9 Thermal Infrared (LST), Sentinel-2 (NDVI, NDBI), and surface albedo reflectance composites derived from planetary earth observation pipelines.
 - **Dual Temperature Observation Modes:**
-  - **Surface Temperature Mode:** Sourced from *Landsat 8/9 Thermal Infrared Sensor* & *Google Earth Engine*; measures *Land Surface Temperature (LST)* and heat absorbed by roads, roofs, and concrete (e.g., Bengaluru Surface: **~42.8°C**).
+  - **Surface Temperature Mode:** Sourced from calibrated *Landsat 8/9 Thermal Infrared Sensor Band 10* composites; measures *Land Surface Temperature (LST)* and heat absorbed by roads, roofs, and concrete (e.g., Bengaluru Surface: **~42.8°C**).
   - **Ambient Air Temperature Mode:** Sourced from *Weather APIs (AccuWeather/IMD)*; measures *human-experienced shaded air temperature* in 2m Stevenson screens (e.g., Bengaluru Air: **~31.5°C**).
 - **Multi-City & Onboard New City Capability:** Instant support for Bengaluru, Delhi, Mumbai, Ahmedabad, Chennai, Hyderabad, Kolkata, Dubai, and Nagpur (Maharashtra), plus an interactive Admin UI to onboard any global city on the fly.
-- **BigQuery Geospatial Analytics:** Exposure modeling across critical urban assets (schools, hospitals, transit terminals, population density).
+- **BigQuery Geospatial Analytics Pipeline:** Offline spatial data processing and asset clustering (`ST_DWithin`) cross-referencing thermal anomalies with critical urban infrastructure (schools, hospitals, transit terminals, population density).
 - **Google Cloud Firestore Native:** Real-time persistence for all user roles, access requests, and municipal action plans.
-- **Prescriptive Optimization (Google OR-Tools):** Mixed-Integer Linear Programming (MIP) that determines the mathematical Pareto-optimal distribution of 4 core climate interventions under budget constraints.
-- **Vertex AI / Gemini 2.0 & 2.5 Flash:** Explainable AI planning agent generating municipal-grade climate action plans, implementation roadmaps, and thermodynamic rationale.
-- **Avani Project Help Bot & Extensible Knowledge Base:** Floating AI assistant at the bottom-right corner powered by Gemini 2.5 Flash and a dedicated knowledge base (`app/data/help_bot_knowledge.json`). Answers questions strictly from our app only, with strict security guardrails preventing any leakage of credentials or API keys.
+- **Prescriptive Optimization (Google OR-Tools):** Multi-objective Mixed-Integer Linear Programming (MILP) solving a budget-constrained weighted-sum scalarization across competing municipal objectives (thermal reduction, canopy expansion, albedo gain, public health protection) to compute optimal intervention allocations along the Pareto efficiency frontier in under 50ms.
+- **Gemini API (Google AI) & Gemini 2.0 Flash:** Explainable AI planning agent generating municipal-grade climate action plans, implementation roadmaps, and thermodynamic rationale.
+- **Avani Project Help Bot & Extensible Knowledge Base:** Floating AI assistant at the bottom-right corner powered by Gemini 2.0 Flash via Google GenAI SDK and a dedicated knowledge base (`app/data/help_bot_knowledge.json`). Answers questions strictly from our app only, with strict security guardrails preventing any leakage of credentials or API keys.
 
 ---
 
@@ -46,15 +46,15 @@ Urban Heat Islands (UHI) disproportionately impact dense metropolitan centers, d
 User / Municipal Urban Planner
  │
  ▼
-Interactive GIS Geospatial Dashboard (Dark-mode, Leaflet / Google Maps)
+Interactive GIS Geospatial Dashboard (Dark-mode, Leaflet.js with CartoDB Dark Matter tiles)
  │
  ▼
 FastAPI Gateway & Geospatial Engine
  │
- ├── 1. Google Earth Engine (Landsat 8/9 LST + Sentinel-2 Composites)
+ ├── 1. Calibrated Satellite Composites (Landsat 8/9 LST + Sentinel-2 MSI)
  ├── 2. Heat Vulnerability Index (HVI) Engine (6-Factor Normalized Model)
- ├── 3. Google OR-Tools MIP Solver (SCIP Optimization Engine)
- └── 4. Vertex AI / Gemini 2.5 Agent (Prescriptive Briefing & Roadmap)
+ ├── 3. Google OR-Tools MILP Solver (SCIP Optimization Engine, <50ms)
+ └── 4. Gemini 2.0 Flash AI Agent (Google GenAI SDK Prescriptive Briefing & Roadmap)
  │
  ▼
 Exportable Climate Action Plan (PDF / JSON / Printable Briefing)
@@ -147,7 +147,7 @@ Once the server is running, open your web browser:
 | :--- | :--- | :--- |
 | **Interactive Web UI** | [http://localhost:8000](http://localhost:8000) | Full GIS dashboard, thermal timeline, optimization sliders & AI planner |
 | **Swagger API Docs** | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive OpenAPI / Swagger documentation for all REST endpoints |
-| **Health Check API** | [http://localhost:8000/api/status](http://localhost:8000/api/status) | Real-time connection status of Vertex AI, Earth Engine, BigQuery, and Firestore |
+| **Health Check API** | [http://localhost:8000/api/status](http://localhost:8000/api/status) | Real-time connection status of Gemini API, calibrated satellite composites, BigQuery staging, and Firestore |
 
 ---
 
@@ -236,14 +236,17 @@ HVI =
   - `85 - 100`: Critical
 
 ### 2. Prescriptive Multi-Objective Optimization (OR-Tools)
-Maximize total weighted resilience impact:
-$$\max \sum_{i \in \text{Wards}} \left( \text{CoolingBenefit}_i \times \text{PopWeight}_i \times \text{HVI}_i^{1.5} \times \text{InfraWeight}_i \right)$$
+
+Avani Albedo formulates municipal intervention planning as a multi-objective Mixed-Integer Linear Program (MILP) solved via Google OR-Tools (SCIP). Rather than computing an arbitrary single plan, the engine solves a budget-constrained weighted-sum scalarization across competing municipal objectives (thermal reduction, canopy expansion, albedo gain, public health protection). By varying objective weights across 4 strategic policies (*AI Balanced, Green First, Albedo First, Public Health First*), the engine computes exact non-dominated allocation points along the Pareto efficiency frontier under strict budget and 16 m² root-space feasibility bounds in under 50 milliseconds:
+
+$$\max \sum_{i \in \text{Wards}} \left( w_{\text{cool}} \cdot \Delta T_i + w_{\text{albedo}} \cdot \Delta \alpha_i + w_{\text{green}} \cdot \text{Canopy}_i + w_{\text{health}} \cdot \text{VulnProt}_i \right)$$
 
 Subject to:
 $$\sum_{i} \left( x_{\text{trees}, i} \cdot C_{\text{tree}} + x_{\text{roof}, i} \cdot C_{\text{roof}} + x_{\text{shade}, i} \cdot C_{\text{shade}} + x_{\text{hyd}, i} \cdot C_{\text{hyd}} \right) \le \text{Budget}$$
 
-And physical ward constraints:
-$$0 \le x_{\text{trees}, i} \le \text{MaxTrees}_i, \quad 0 \le x_{\text{roof}, i} \le \text{MaxRoofArea}_i$$
+And physical land feasibility bounds:
+$$0 \le x_{\text{trees}, i} \le \text{MaxViableTrees}_i \quad (\text{enforcing } \ge 16\,\text{m}^2 \text{ unsealed soil/tree})$$
+$$0 \le x_{\text{roof}, i} \le \text{MaxRoofArea}_i \quad (\text{zero-soil SRI } \ge 85\% \text{ coatings})$$
 
 ---
 
@@ -275,6 +278,7 @@ tests/test_api.py::test_copilot_temperature_modes_knowledge PASSED
 tests/test_api.py::test_help_bot_security_refuses_credentials_and_api_keys PASSED
 tests/test_api.py::test_help_bot_app_only_guardrail_and_knowledge PASSED
 tests/test_api.py::test_help_bot_knowledge_api_endpoint PASSED
+tests/test_api.py::test_help_bot_key_configuration_inquiry_and_dynamic_responses PASSED
 tests/test_api.py::test_action_plan_with_persona_and_recommendations PASSED
 tests/test_api.py::test_historical_timelapse_and_land_feasibility PASSED
 tests/test_api.py::test_spot_phase_evaluation_and_calendar_endpoints PASSED
@@ -282,7 +286,7 @@ tests/test_api.py::test_admin_satellite_ingestion_and_pipeline_telemetry PASSED
 tests/test_api.py::test_nagpur_cells_and_dynamic_city_registration PASSED
 tests/test_hvi.py::test_hvi_calculation_and_categories PASSED
 tests/test_optimizer.py::test_optimizer_budget_and_scenarios PASSED
-======================== 24 passed in 4.21s =========================
+======================== 25 passed in 8.29s =========================
 ```
 
 ---

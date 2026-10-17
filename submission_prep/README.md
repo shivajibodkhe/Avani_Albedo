@@ -41,7 +41,7 @@ Every document in this directory has been structured specifically to ensure **10
 
 ## 🎯 4 Core Google Cloud Technologies Highlighted
 
-1. **Vertex AI & Gemini 2.0 Flash:** Prescriptive municipal action plans with thermodynamic justifications and 24/7 floating AI help bot.
+1. **Gemini API (Google AI) & Gemini 2.0 Flash:** Prescriptive municipal action plans with thermodynamic justifications and 24/7 floating AI help bot.
 2. **Google Cloud Run:** Serverless containerized FastAPI backend and OR-Tools MILP solver with sub-50ms execution in `asia-south1`.
 3. **Google Cloud Firestore (Native Mode):** Enterprise scenario persistence (`avani_scenarios`), session management (`avani_users`), and real-time alerts (`avani_alerts`).
 4. **Firebase:** 1-Click Google Sign-In and global CDN asset delivery.

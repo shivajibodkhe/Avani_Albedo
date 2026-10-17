@@ -352,7 +352,7 @@ def generate_action_plan(
     selected_ward_id: Optional[str] = None
 ) -> ActionPlanResponse:
     """
-    Generates the prescriptive action plan using Gemini 2.5 Flash / Vertex AI if available,
+    Generates the prescriptive action plan using Gemini 2.0 Flash (Google AI) if available,
     otherwise gracefully falls back to the deterministic resilience engine.
     """
     if not settings.GEMINI_API_KEY:

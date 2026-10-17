@@ -17,7 +17,7 @@
   3. **Anusha D** — `anushadhananjayamurthy@gmail.com`
   4. **Akshatha Ramachandra Prabhu** — `akshatha.r.prabhu@gmail.com`
 * **d. Problem Statement:**
-  > **Prescriptive Urban Heat Island (UHI) Resilience & Albedo Optimization:** Transforming planetary satellite earth observation telemetry into budget-constrained, Pareto-optimal municipal cooling interventions (*Urban Forests, Zero-Soil High-Albedo Cool Roofs, Tensile Shade Canopies, and Public Hydration Kiosks*) using Google Cloud Run, Google OR-Tools (MILP), and Vertex AI Gemini 2.0 Flash.
+  > **Prescriptive Urban Heat Island (UHI) Resilience & Albedo Optimization:** Transforming planetary satellite earth observation telemetry into budget-constrained, Pareto-optimal municipal cooling interventions (*Urban Forests, Zero-Soil High-Albedo Cool Roofs, Tensile Shade Canopies, and Public Hydration Kiosks*) using Google Cloud Run, Google OR-Tools (MILP), and Gemini 2.0 Flash (Google AI).
 
 ---
 
@@ -32,20 +32,20 @@
   * Metropolitan centers are experiencing unprecedented thermal anomalies. Due to the replacement of natural canopy with dark asphalt and concrete (>85% sealed ground), Land Surface Temperatures (LST) reach **42.8°C–45.3°C** under direct solar irradiance (~950 W/m²), creating dangerous Urban Heat Islands (UHI).
 * **The Solution — Avani Albedo:**
   * While traditional GIS platforms are purely *descriptive* (identifying where it is hot without solutions), **Avani Albedo is a prescriptive decision-support engine**.
-  * **Step 1:** Ingests satellite Earth observations from **NASA/USGS Landsat 8/9 Band 10 (thermal infrared radiance)** and **ESA Copernicus Sentinel-2 MSI (10m NDVI & NDBI)** to compute a continuous 6-factor **Heat Vulnerability Index (HVI)**.
-  * **Step 2:** Uses **Google OR-Tools (SCIP Mixed-Integer Linear Programming)** to solve the Pareto-optimal budget allocation across 4 physical interventions in **<50 milliseconds**.
-  * **Step 3:** **Vertex AI Gemini 2.0 Flash** translates the mathematical model into explainable, municipal-grade executive action plans and roadmaps for city leadership.
+  * **Step 1:** Ingests calibrated multi-spectral composites derived from **NASA/USGS Landsat 8/9 Band 10 (thermal infrared radiance)** and **ESA Copernicus Sentinel-2 MSI (10m NDVI & NDBI)** to compute a continuous 6-factor **Heat Vulnerability Index (HVI)**.
+  * **Step 2:** Uses **Google OR-Tools (SCIP Mixed-Integer Linear Programming)** solving a multi-objective weighted-sum scalarization to compute non-dominated allocation points along the Pareto efficiency frontier across 4 physical interventions in **<50 milliseconds**.
+  * **Step 3:** **Gemini 2.0 Flash (Google AI)** translates the mathematical model into explainable, municipal-grade executive action plans and roadmaps for city leadership.
 
 ---
 
 ### **Slide 4: Opportunities**
 
 * **1. How different is it from existing ideas?**
-  * **Actionable Prescriptive Intelligence:** GIS tools (ArcGIS, Google Earth) show heatmaps; Avani Albedo prescribes the exact mathematical intervention portfolio (trees, roofs, shades, kiosks) for maximum °C reduction per rupee/dollar spent.
+  * **Actionable Prescriptive Intelligence:** GIS tools (ArcGIS, Google Earth) show heatmaps; Avani Albedo prescribes the exact mathematical intervention portfolio (trees, roofs, shades, kiosks) for maximum °C reduction per rupee/dollar spent along the Pareto frontier.
   * **Physical Land Carrying Capacity Law:** Standard plans prescribe "ghost trees" in concrete wards where saplings wither. Avani Albedo enforces a strict **16 m² permeable soil root-zone limit**, automatically rerouting excess budget to **Zero-Soil Cool Roofs (SRI ≥ 85%)** in hyper-dense wards (>90% concrete).
 * **2. How will it be able to solve the problem?**
   * Bridges satellite skin temperature (~42.8°C) with ground weather app temperature (~31.5°C) via **Dual Temperature Modes**.
-  * Deploys interventions strategically around critical public infrastructure: schools, hospitals, and outdoor labor transit corridors.
+  * Deploys interventions strategically around critical public infrastructure: schools, hospitals, and outdoor labor transit corridors staged via **BigQuery Geospatial pipelines**.
 * **3. USP of the Proposed Solution:**
   * **Sub-50ms Multi-Objective Optimization:** Pareto resilience frontiers solved instantaneously on Google Cloud Run.
   * **Decadal Timelapse Verification (2014–2026):** Validates the historic loss of 49,200 canopy trees and models regenerative recovery.
@@ -58,8 +58,8 @@
 1. **6-Factor Normalized Heat Vulnerability Index (HVI):**
    * Real-time normalization of LST thermal anomaly (25%), vegetation deficit 1-NDVI (20%), concrete density NDBI (15%), population density (15%), demographic age vulnerability (15%), and critical asset deficit (10%).
 2. **Google OR-Tools SCIP Mixed-Integer Linear Programming (MILP) Solver:**
-   * Solves: $\text{Maximize } \sum (\text{CoolingBenefit}_i \times \text{Beneficiaries}_i \times \text{HVI}_i)$ subject to $\text{Cost} \le \text{Budget}$.
-3. **Vertex AI Gemini 2.0 Flash Planning Agent:**
+   * Solves multi-objective weighted scalarization across cooling, canopy, albedo, and public health subject to budget and 16 m² root space constraints.
+3. **Gemini 2.0 Flash Planning Agent (Google AI SDK):**
    * Synthesizes municipal briefings with thermodynamic justifications, ranked ward priorities, and co-benefits.
 4. **4 Prescriptive Climate Interventions:**
    * 🌳 Urban Tree Canopies (₹3,000 / tree; 16 m² soil bound)
@@ -141,7 +141,7 @@
 │                                                                        │
 │   ├── /api/cells (Spatial Ward & 6-Factor HVI Engine)                 │
 │   ├── /api/optimize (Google OR-Tools SCIP Mathematical Solver)         │
-│   ├── /api/action-plan (Vertex AI Gemini 2.0 Flash Agent)              │
+│   ├── /api/action-plan (Gemini 2.0 Flash AI Planning Agent)            │
 │   ├── /api/help-bot/chat (Domain-Bound Official AI Help Bot)           │
 │   ├── /api/history/timelapse (Decadal Earth Satellite Timelapse)       │
 │   └── /api/admin (Satellite Telemetry Ingestion Pipeline)              │
@@ -149,11 +149,11 @@
          │                  │                   │
          ▼                  ▼                   ▼
 ┌─────────────────┐ ┌───────────────┐ ┌──────────────────────────────────┐
-│ Cloud Firestore │ │ Google Earth  │ │    Vertex AI / Google GenAI     │
-│  (Native Mode)  │ │ Engine (GEE)  │ │         Gemini 2.0 Flash         │
-│                 │ │               │ │                                  │
+│ Cloud Firestore │ │ Calibrated    │ │     Gemini 2.0 Flash (Google AI) │
+│  (Native Mode)  │ │ Satellite     │ │        via Google GenAI SDK      │
+│                 │ │ Composites    │ │                                  │
 │ Persistent:     │ │ Landsat 8/9   │ │ • Executive Municipal Briefs     │
-│ • avani_scenarios│ │ TIRS (Band 10)│ │ • Thermodynamic Justifications   │
+│ • avani_scenarios│ │ TIRS Band 10  │ │ • Thermodynamic Justifications   │
 │ • avani_users   │ │ Sentinel-2    │ │ • Ranked Ward Allocations        │
 │ • avani_config  │ │ MSI (NDVI)    │ │ • 24/7 AI Project Help Bot       │
 └─────────────────┘ └───────────────┘ └──────────────────────────────────┘
@@ -163,14 +163,14 @@
 
 ### **Slide 9: Technologies to be Used in the Solution**
 
-| Google Cloud Technology | Implementation in Avani Albedo |
+| Technology | Implementation in Avani Albedo |
 | :--- | :--- |
 | **Google Cloud Run** | Containerized serverless deployment in `asia-south1`, auto-scaling 0–10 instances with sub-50ms cold starts. |
-| **Vertex AI & Gemini 2.0 Flash** | Powers explainable planning briefs, thermodynamic rationales, and the 24/7 project help bot via Google GenAI SDK. |
+| **Gemini API (Google AI) & Gemini 2.0 Flash** | Powers explainable planning briefs, thermodynamic rationales, and the 24/7 project help bot via Google GenAI SDK. |
 | **Google Cloud Firestore** | Serverless NoSQL document database persisting scenario plans (`avani_scenarios`), users, and runtime config. |
 | **Google Cloud Secret Manager** | Secure enterprise secret mounting for `GEMINI_API_KEY` and `JUDGE_PASSWORD`. |
-| **Google Earth Engine (GEE)** | Planetary radiometric calibration of Landsat 8/9 TIRS (Band 10 LST) and Sentinel-2 MSI (10m NDVI). |
-| **BigQuery (Spatial SQL)** | Executes spatial clustering queries (`ST_DWithin`, `ST_Intersects`) correlating heat anomalies with hospitals and schools. |
+| **Calibrated Satellite Composites** | Pre-calibrated radiometric composites of Landsat 8/9 TIRS (Band 10 LST) and Sentinel-2 MSI (10m NDVI). |
+| **BigQuery Geospatial Pipeline** | Offline spatial staging and clustering (`ST_DWithin`, `ST_Intersects`) cross-referencing heat anomalies with hospitals and schools. |
 | **Google OR-Tools** | Mixed-Integer Linear Programming (SCIP) solver finding Pareto-optimal intervention allocations. |
 | **Firebase Authentication** | 1-Click Google Sign-In and role-based credential verification for judges and administrators. |
 
@@ -181,8 +181,8 @@
 * **Development & Evaluation Cost: ₹0.00 (100% Covered by Free Tier)**
   * **Google Cloud Run:** 2,000,000 requests/month, 360,000 vCPU-seconds free.
   * **Google Cloud Firestore:** 1 GiB storage, 50,000 reads/day, 20,000 writes/day free.
-  * **Vertex AI / Gemini API:** Google AI Studio / Vertex free tier (15 RPM, 1,500 requests/day).
-  * **Google Earth Engine & BigQuery:** Free tier analysis allocation (1 TB spatial queries/month free).
+  * **Gemini API (Google AI):** Google AI Studio free tier (15 RPM, 1,500 requests/day).
+  * **BigQuery & Staging:** Free tier batch loading (`bq load`) and analysis allocation (1 TB spatial queries/month free).
 * **Enterprise Municipal Scale Cost (20 Million Population Megacity):**
   * Cloud Run Auto-scaling (10 instances peak): **~$12 – $18 / month**
   * Firestore Scenario Storage (100,000 saved plans): **~$4 / month**

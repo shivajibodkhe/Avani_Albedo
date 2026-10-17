@@ -23,12 +23,12 @@
 
 **Avani Albedo** is an agentic, planetary-scale urban climate resilience platform that transforms multi-spectral satellite heat observations into mathematically optimal, budget-constrained municipal cooling interventions (**Tree Canopy Planting, Zero-Soil High-Albedo Cool Roofs, Tensile Shade Structures, and Public Hydration Kiosks**).
 
-While conventional GIS dashboards merely show passive heat maps, Avani Albedo computes a normalized 6-factor **Heat Vulnerability Index (HVI)** across metropolitan wards and leverages **Google OR-Tools** to solve a Mixed-Integer Linear Program (MILP), identifying the Pareto-optimal allocation of physical interventions within municipal budget limits in **under 50 milliseconds**.
+While conventional GIS dashboards merely show passive heat maps, Avani Albedo computes a normalized 6-factor **Heat Vulnerability Index (HVI)** across metropolitan wards and leverages **Google OR-Tools** to solve a multi-objective Mixed-Integer Linear Program (MILP), computing optimal intervention allocations along the Pareto efficiency frontier within municipal budget limits in **under 50 milliseconds**.
 
 ### ☁️ How We Leverage Core Google Cloud Technologies:
 
-1. **Vertex AI & Gemini 2.0 Flash:**
-   - **Municipal Planning Agent:** Translates complex Pareto optimization solutions into executive, explainable climate action plans with thermodynamic justifications, prioritized ward allocations, and 3-phase implementation roadmaps tailored to specific decision-makers (*Municipal Commissioner, Chief Public Health Officer, Urban Infrastructure Planner, Disaster Management Chief*).
+1. **Gemini API (Google AI) & Gemini 2.0 Flash:**
+   - **Municipal Planning Agent:** Translates complex MILP Pareto optimization allocations into executive, explainable climate action plans with thermodynamic justifications, prioritized ward allocations, and 3-phase implementation roadmaps tailored to specific decision-makers (*Municipal Commissioner, Chief Public Health Officer, Urban Infrastructure Planner, Disaster Management Chief*) via the `google-genai` SDK.
    - **24/7 AI Project Help Bot:** A domain-bound floating AI assistant embedded on the dashboard and landing gateway, answering scientific, algorithmic, and engineering questions with strict security guardrails preventing credential disclosure.
 
 2. **Google Cloud Run:**
@@ -41,11 +41,11 @@ While conventional GIS dashboards merely show passive heat maps, Avani Albedo co
 
 4. **Firebase (Hosting & Authentication):**
    - **1-Click Google Sign-In & Auth:** Secure role-based identity management integrating Firebase Authentication with seamless evaluator access.
-   - **Static Asset Delivery:** Lightning-fast global CDN delivery for the dark-mode interactive GIS interface.
+   - **Static Asset Delivery:** Lightning-fast global CDN delivery for the dark-mode interactive Leaflet.js GIS interface.
 
-5. **Complementary Google Geospatial & Optimization Stack:**
-   - **Google Earth Engine (GEE):** Planetary radiometric calibration of Landsat 8/9 TIRS Band 10 (Land Surface Temperature) and Sentinel-2 MSI 10m (NDVI vegetation & NDBI built-up indices).
-   - **BigQuery Geospatial:** High-performance spatial clustering (`ST_DWithin`, `ST_Intersects`) cross-referencing thermal hotspots with critical social assets (schools, hospitals, transit hubs).
+5. **Complementary Geospatial & Optimization Stack:**
+   - **Calibrated Earth Observation Composites:** Pre-calibrated radiometric composites of Landsat 8/9 TIRS Band 10 (Land Surface Temperature) and Sentinel-2 MSI 10m (NDVI vegetation & NDBI built-up indices) derived from earth observation pipelines and staged locally for sub-50ms deterministic evaluation without upstream API latency.
+   - **BigQuery Geospatial Pipeline:** Offline spatial staging pipeline and spatial clustering (`ST_DWithin`, `ST_Intersects`) cross-referencing thermal hotspots with critical social assets (schools, hospitals, transit hubs) loaded free via `bq load`.
    - **Physical Land Feasibility Engine:** Enforces a strict 16 m² root space constraint per tree, redirecting excess thermal load to Zero-Soil Cool Roofs (SRI ≥ 85%) in hyper-dense wards (>90% sealed concrete) to eliminate "ghost tree" planting failures.
 
 ---

@@ -12,7 +12,7 @@
       "Physical land feasibility bounding (16 m² soil root constraint per tree, rerouting to zero-soil cool roofs)",
       "12-Year Google Earth decadal timelapse (2014-2026) and 20-Year satellite archive (2005-2025)",
       "Cascading geography (5 Countries, States, Cities, Wards) with real-time multi-currency engine (INR, USD, AED, GBP, SGD)",
-      "Municipal explainable planning briefs powered by Vertex AI Gemini 2.5 Flash with resilient offline fallback"
+      "Municipal explainable planning briefs powered by Gemini 2.0 Flash (Google AI SDK) with resilient offline fallback"
     ]
   },
   "security_policy": {
@@ -77,7 +77,7 @@
       "keywords": [
         "gcp", "cloud run", "firestore", "architecture", "bigquery", "earth engine", "vertex", "stack"
       ],
-      "content": "### ☁️ Google Cloud Platform (GCP) Enterprise Architecture\n\nAvani Albedo is built on a serverless, production-grade GCP foundation:\n\n1. **Google Cloud Run:**\n   - Hosts the containerized FastAPI application and Google OR-Tools SCIP solver.\n   - Auto-scales dynamically from 0 to 10 instances with near-zero idle cost and <50ms response times.\n2. **Google Cloud Firestore (Native Mode):**\n   - Automatically persists all generated scenario plans in `avani_scenarios` collection.\n   - Maintains administrative security audit logs in `avani_audit`.\n3. **Google Earth Engine (GEE):**\n   - Accesses live radiometric archives from Landsat 8/9 and Sentinel-2 for radiometric surface temperature and vegetation indexing.\n4. **Google BigQuery Geospatial:**\n   - Performs spatial clustering of hospitals, transit hubs, and schools against thermal anomalies using `ST_DWithin` queries.\n5. **Vertex AI & Gemini 2.5 Flash:**\n   - Synthesizes municipal-grade explainable action plans, implementation roadmaps, and stakeholder briefings.\n6. **Firebase Authentication:**\n   - Provides secure role-based access control with administrative session management."
+      "content": "### ☁️ Google Cloud Platform (GCP) Enterprise Architecture\n\nAvani Albedo is built on a serverless, production-grade GCP foundation:\n\n1. **Google Cloud Run:**\n   - Hosts the containerized FastAPI application and Google OR-Tools SCIP solver.\n   - Auto-scales dynamically from 0 to 10 instances with near-zero idle cost and <50ms response times.\n2. **Google Cloud Firestore (Native Mode):**\n   - Automatically persists all generated scenario plans in `avani_scenarios` collection.\n   - Maintains administrative security audit logs in `avani_audit`.\n3. **Calibrated Satellite Composites:**\n   - Pre-calibrated radiometric archives derived from Landsat 8/9 and Sentinel-2 for radiometric Land Surface Temperature (LST) and vegetation indexing (NDVI/NDBI) staged for deterministic, low-latency evaluation.\n4. **Google BigQuery Geospatial Pipeline:**\n   - Offline staging pipeline for spatial clustering of hospitals, transit hubs, and schools against thermal anomalies using `ST_DWithin` spatial SQL.\n5. **Gemini API (Google AI) & Gemini 2.0 Flash:**\n   - Synthesizes municipal-grade explainable action plans, implementation roadmaps, and stakeholder briefings.\n6. **Firebase Authentication:**\n   - Provides secure role-based access control with administrative session management."
     },
     "land_feasibility": {
       "title": "Physical Land Feasibility & Spot-Specific Phase Evaluator",
