@@ -14,6 +14,7 @@ Every document in this directory has been structured specifically to ensure **10
 | **03** | [**`03_3_TO_4_MIN_VIDEO_DEMO_SCRIPT.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/03_3_TO_4_MIN_VIDEO_DEMO_SCRIPT.md) | **Mandatory 3 to 4 Minute Video Demonstration:** Precise second-by-second recording script (timed at **3:30**) showing live working prototype functionality. |
 | **04** | [**`04_DEPLOYED_PROTOTYPE_AND_JUDGE_GUIDE.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/04_DEPLOYED_PROTOTYPE_AND_JUDGE_GUIDE.md) | **Live Deployed Prototype & Judge Credentials:** Production Cloud Run URL, judge credentials, 3-minute rapid walkthrough, and 99.9% uptime architecture guarantees. |
 | **05** | [**`05_GITHUB_REPO_AND_SUBMISSION_CHECKLIST.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/05_GITHUB_REPO_AND_SUBMISSION_CHECKLIST.md) | **Pre-Submission Flight Checklist:** Verification table for all public links, team member roster, video duration limits, and security hygiene. |
+| **06** | [**`06_VERIFIED_TECH_STACK_AND_CODE_AUDIT.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/06_VERIFIED_TECH_STACK_AND_CODE_AUDIT.md) | **Verified Tech Stack & Code Audit:** Complete code-audited technology matrix, line counts, runtime constraints, and Gemini API key format requirements. |
 
 ---
 
