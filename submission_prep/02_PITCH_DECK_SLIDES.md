@@ -114,7 +114,7 @@
 ### **Slide 7: Wireframes / Mock Diagrams of the Proposed Solution**
 *(Add screenshot of the Avani Albedo dark-mode GIS dashboard)*
 
-* **Callout 1: Top Navigation Bar:** Cascading Country $\rightarrow$ State $\rightarrow$ City dropdowns, Multi-Currency toggle (`₹ INR / $ USD`), System Status badge (`v1.1.2`), and Admin Control Center.
+* **Callout 1: Top Navigation Bar:** Cascading Country $\rightarrow$ State $\rightarrow$ City dropdowns, Multi-Currency toggle (`₹ INR / $ USD`), System Status badge (`v1.1.3`), and Admin Control Center.
 * **Callout 2: Left Intervention Control Panel:** Interactive municipal budget slider (₹10 Lakh to ₹5 Crore), Strategic Objective selector (AI Pareto, Green First, Albedo First, Public Health First), and Decision-Maker Persona selector.
 * **Callout 3: Central GIS Geospatial Heat Map:** Ward boundaries color-coded by continuous HVI (Critical Red, Severe Orange, Moderate Yellow, Low Green), clickable ward popups, and satellite tile overlays.
 * **Callout 4: Tabbed Analysis Suite:**

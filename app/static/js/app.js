@@ -357,6 +357,60 @@ function initEventHandlers() {
       if (lngEl) lngEl.value = "79.0882";
       if (currEl) currEl.value = "INR|₹";
       if (budgetEl) budgetEl.value = "12000000";
+      const customCountryInput = document.getElementById('new-city-country-custom');
+      if (customCountryInput) customCountryInput.classList.add('hidden');
+    });
+  }
+
+  // Onboard New City: Country & Flag Dropdown Synchronization
+  const newCityCountrySelect = document.getElementById('new-city-country');
+  const newCityFlagSelect = document.getElementById('new-city-flag');
+  const newCityCurrencySelect = document.getElementById('new-city-currency');
+  const newCityCountryCustom = document.getElementById('new-city-country-custom');
+
+  if (newCityCountrySelect) {
+    newCityCountrySelect.addEventListener('change', () => {
+      const selectedOpt = newCityCountrySelect.options[newCityCountrySelect.selectedIndex];
+      if (!selectedOpt) return;
+      const flag = selectedOpt.getAttribute('data-flag');
+      const currency = selectedOpt.getAttribute('data-currency');
+
+      if (newCityFlagSelect && flag) {
+        newCityFlagSelect.value = flag;
+      }
+      if (newCityCurrencySelect && currency) {
+        newCityCurrencySelect.value = currency;
+      }
+      if (newCityCountrySelect.value === 'Custom') {
+        if (newCityCountryCustom) {
+          newCityCountryCustom.classList.remove('hidden');
+          newCityCountryCustom.focus();
+        }
+      } else {
+        if (newCityCountryCustom) {
+          newCityCountryCustom.classList.add('hidden');
+        }
+      }
+    });
+  }
+
+  if (newCityFlagSelect) {
+    newCityFlagSelect.addEventListener('change', () => {
+      const chosenFlag = newCityFlagSelect.value;
+      if (newCityCountrySelect && chosenFlag !== '🌐') {
+        for (let i = 0; i < newCityCountrySelect.options.length; i++) {
+          const opt = newCityCountrySelect.options[i];
+          if (opt.getAttribute('data-flag') === chosenFlag && opt.value !== 'Custom') {
+            newCityCountrySelect.selectedIndex = i;
+            const currency = opt.getAttribute('data-currency');
+            if (newCityCurrencySelect && currency) {
+              newCityCurrencySelect.value = currency;
+            }
+            if (newCityCountryCustom) newCityCountryCustom.classList.add('hidden');
+            break;
+          }
+        }
+      }
     });
   }
 
@@ -1169,7 +1223,11 @@ window.handleAddNewCitySubmit = async function(event) {
   const consoleEl = document.getElementById('add-city-console');
   
   const name = document.getElementById('new-city-name').value.trim();
-  const country = document.getElementById('new-city-country').value.trim();
+  let country = document.getElementById('new-city-country').value.trim();
+  if (country === 'Custom') {
+    const customInput = document.getElementById('new-city-country-custom');
+    country = customInput && customInput.value.trim() ? customInput.value.trim() : "Custom Region";
+  }
   const flag = document.getElementById('new-city-flag').value.trim();
   const lat = parseFloat(document.getElementById('new-city-lat').value);
   const lng = parseFloat(document.getElementById('new-city-lng').value);

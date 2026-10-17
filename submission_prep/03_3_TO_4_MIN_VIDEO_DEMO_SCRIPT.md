@@ -23,7 +23,7 @@
 ## 🎬 Detailed Second-by-Second Video Script
 
 ### **[0:00 – 0:30] Segment 1: The Problem & The Mission**
-* **On Screen:** Start on the landing gateway (`https://avani-albedo-hbxrfbol2a-el.a.run.app`). Show the title **"AVANI ALBEDO v1.1.2"** and subtitle *"Optimizing Albedo, Cooling the Earth"*.
+* **On Screen:** Start on the landing gateway (`https://avani-albedo-hbxrfbol2a-el.a.run.app`). Show the title **"AVANI ALBEDO v1.1.3"** and subtitle *"Optimizing Albedo, Cooling the Earth"*.
 * **Voiceover:**
   > *"Hello judges! Welcome to Avani Albedo, built for the Google Cloud AI Builder Cup under the Sustainability & Social Impact track.*  
   > *Rapid urbanization has replaced natural soil and canopy with dark concrete, causing Land Surface Temperatures in cities like Bengaluru to spike above 42°C—over 10 degrees hotter than ambient air. While conventional GIS tools merely display heat maps without answers, Avani Albedo is a prescriptive climate resilience engine that tells city commissioners exactly what interventions to fund, where to deploy them, and how much cooling they will achieve."*

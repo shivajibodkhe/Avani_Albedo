@@ -8,7 +8,7 @@ load_dotenv(BASE_DIR / ".env", override=True)
 class Settings:
     APP_NAME: str = "Avani Albedo"
     APP_SLOGAN: str = "Optimizing Albedo, Cooling the Earth."
-    APP_VERSION: str = "1.1.2"
+    APP_VERSION: str = "1.1.3"
     
     # Mode
     APP_MODE: str = os.getenv("APP_MODE", "auto")
