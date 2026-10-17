@@ -16,6 +16,7 @@ Every document in this directory has been structured specifically to ensure **10
 | **05** | [**`05_GITHUB_REPO_AND_SUBMISSION_CHECKLIST.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/05_GITHUB_REPO_AND_SUBMISSION_CHECKLIST.md) | **Pre-Submission Flight Checklist:** Verification table for all public links, team member roster, video duration limits, and security hygiene. |
 | **06** | [**`06_VERIFIED_TECH_STACK_AND_CODE_AUDIT.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/06_VERIFIED_TECH_STACK_AND_CODE_AUDIT.md) | **Verified Tech Stack & Code Audit:** Complete code-audited technology matrix, line counts, runtime constraints, and Gemini API key format requirements. |
 | **07** | [**`07_GCP_ARCHITECTURE_DIAGRAM_FLOW.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/07_GCP_ARCHITECTURE_DIAGRAM_FLOW.md) | **GCP Architecture Diagramming Guide (draw.io):** Complete visual flow blueprint, component inventory, Mermaid diagram, and design guidelines for Draw.io. |
+| **08** | [**`08_NAPKIN_AI_VISUAL_PROMPTS.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/08_NAPKIN_AI_VISUAL_PROMPTS.md) | **Napkin AI Visual Prompts:** Copy-paste ready problem-solving blocks to auto-generate graphics and infographics for slides 4, 5, 6, and 12. |
 
 ---
 
