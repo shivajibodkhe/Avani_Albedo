@@ -104,24 +104,42 @@ flowchart TB
 
 ---
 
-## 📋 2. Draw.io Component Inventory & Icon Guide
+## 📋 2. Exact Icon Mapping from your draw.io GCP Panel
 
-When drawing the shapes in draw.io, search for these exact shape names in the **GCP Icons** shape library:
+In your draw.io search panel for `gcp` (shown in your screenshot), pick these exact icons:
 
-| Layer / Box | Component Name in Diagram | Recommended Draw.io Icon / Shape | Color Palette | Key Details to Include in Label |
-| :--- | :--- | :--- | :--- | :--- |
-| **Client** | Evaluator Browser / UI | `User` / `Laptop` / `Globe` | Slate Dark `#1E293B` | `Vanilla JS, HTML5, Leaflet.js, Chart.js` |
-| **Ingress** | Firebase Hosting CDN | `Firebase Hosting` | Amber `#F59E0B` | `Global Edge CDN • TLS 1.3 • SSL Termination` |
-| **Identity** | Firebase Authentication | `Firebase Authentication` / `Identity Platform` | Amber `#D97706` | `Google 1-Click OAuth • Judge Bypass • RBAC` |
-| **Secrets** | Google Cloud Secret Manager | `Secret Manager` | Red `#DC2626` | `GEMINI_API_KEY, JUDGE_PASSWORD injected at runtime` |
-| **Compute** | Google Cloud Run | `Cloud Run` | Blue `#2563EB` | `FastAPI (Python 3.12) • 0➔10 Autoscaling • asia-south1` |
-| **Optimizer** | Google OR-Tools SCIP | `Cloud Endpoints` / `Optimization Box` | Indigo `#4F46E5` | `SCIP Mixed-Integer Linear Programming • <50ms solve` |
-| **AI / Agent** | Gemini 2.0 Flash | `Gemini` / `Vertex AI` / `AI Studio` | Purple `#9333EA` | `google-genai SDK • Persona Plans • Thermodynamic Rationale` |
-| **Database** | Google Cloud Firestore | `Cloud Firestore` | Green `#059669` | `Native Mode • avani_scenarios, avani_users, avani_alerts` |
-| **Analytics** | BigQuery Geospatial | `BigQuery` | Sky Blue `#0284C7` | `Spatial SQL (ST_GEOGFROMTEXT) • Offline Staging Pipeline` |
-| **Satellite** | Landsat 8/9 & Sentinel-2 | `Satellite` / `Earth Engine` | Orange `#EA580C` | `TIRS Band 10 LST & MSI 10m NDVI/NDBI (9 Cities)` |
-| **Storage** | Google Cloud Storage | `Cloud Storage (GCS)` | Cyan `#0891B2` | `gs://avani-albedo-climate-staging • GeoTIFFs` |
-| **CI/CD** | GitHub Actions & Artifact Registry | `Artifact Registry` / `Cloud Build` | Gray `#475569` | `Automated Pytest (25/25 Passing) • Continuous Deploy` |
+| Component in Avani Albedo | Exact Icon to Drag from Your Screenshot Panel | Icon Position in your draw.io Panel | Label to Write Below Icon |
+| :--- | :--- | :--- | :--- |
+| **Serverless Compute** | **`Cloud Run`** | Row 6, Column 2 *(Multi-colored double chevron)* | **Google Cloud Run**<br>`FastAPI • 0➔10 Auto-Scaling • asia-south1` |
+| **Generative AI Agent** | **`Vertex AI`** or **`AI Applications & Agents`** | Row 8, Column 5 *(Colored vertical bars)* or Row 1, Col 1 | **Gemini 2.0 Flash (Google AI)**<br>`Prescriptive Roadmaps & Thermodynamic Physics` |
+| **Geospatial Analytics** | **`BigQuery`** | Row 6, Column 1 *(Magnifying glass on bar charts)* | **BigQuery Geospatial Pipeline**<br>`Spatial SQL: ST_GEOGFROMTEXT, ST_INTERSECTS` |
+| **Object / Raster Storage** | **`Cloud Storage`** | Row 6, Column 5 *(Blue & orange bucket drawer)* | **Google Cloud Storage (GCS)**<br>`gs://avani-albedo-climate-staging • GeoTIFFs` |
+| **NoSQL Database** | **`Databases`** (or search `Firestore`) | Row 2, Column 3 *(Three-layer blue cylinder)* | **Cloud Firestore (Native Mode)**<br>`avani_scenarios, avani_users, avani_alerts` |
+| **Satellite GIS & Maps** | **`Maps & Geospatial`** | Row 3, Column 4 *(Blue location pin on globe)* | **Leaflet.js GIS & Satellites**<br>`Landsat 8/9 TIRS LST & Sentinel-2 MSI NDVI` |
+| **Security & Secrets** | **`Security & Identity`** | Row 4, Column 2 *(Blue shield with person)* | **Firebase Auth & Secret Manager**<br>`Google 1-Click OAuth • RBAC • Injected Secrets` |
+| **Client Frontend** | **`Web and Mobile`** | Row 4, Column 5 *(Desktop and phone screens)* | **Evaluator Browser UI**<br>`Vanilla JS, HTML5, Chart.js Diurnal Curves` |
+| **Optimization Solver** | **`Compute`** | Row 1, Column 5 *(Blue lightning bolt)* | **Google OR-Tools SCIP**<br>`Integer MILP Solver • 16 m² Root Space Bound` |
+| **CI/CD Pipeline** | **`DevOps`** or **`Developer Tools`** | Row 2, Column 6 *(Infinity ribbon)* or Row 2, Col 5 | **CI/CD & Cloud Build**<br>`GitHub Actions • 25/25 Pytest Passing` |
+| **Monitoring & Logs** | **`Observability`** | Row 3, Column 6 *(Blue square bar chart)* | **Cloud Logging & Probes**<br>`/api/status • Health & Audit Telemetry` |
+
+---
+
+### 🎨 How to Arrange These 11 Icons on Your Canvas:
+
+1. **Top Row (Client & Ingress):**
+   * Place **`Web and Mobile`** (Left) $\rightarrow$ Arrow $\rightarrow$ **`Security & Identity`** (Right).
+2. **Center Core (Compute & Optimization):**
+   * Place **`Cloud Run`** in a prominent central position.
+   * Right next to it, place **`Compute`** (Google OR-Tools) with a two-way arrow.
+3. **Right Flank (AI Reasoning):**
+   * Place **`Vertex AI / AI Applications & Agents`** (Gemini 2.0 Flash) connected to **`Cloud Run`**.
+4. **Bottom Row (Data & Storage Pipeline):**
+   * Place **`Databases`** (Firestore) in the center-bottom connected to **`Cloud Run`**.
+   * Place **`BigQuery`** and **`Cloud Storage`** to the bottom-left.
+   * Place **`Maps & Geospatial`** (Satellite telemetry) connected into **`Cloud Run`**.
+5. **Left or Top Edge (DevOps & Observability):**
+   * Place **`DevOps`** pointing into **`Cloud Run`**.
+   * Place **`Observability`** receiving logs from **`Cloud Run`**.
 
 ---
 
