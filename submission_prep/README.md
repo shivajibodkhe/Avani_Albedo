@@ -9,6 +9,7 @@ Every document in this directory has been structured specifically to ensure **10
 
 | # | Document File | Purpose & Rule Addressed |
 | :---: | :--- | :--- |
+| **00** | [**`00_PROJECT_BIRDS_EYE_VIEW.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/00_PROJECT_BIRDS_EYE_VIEW.md) | **Single Master Bird's-Eye View:** The complete end-to-end executive blueprint detailing problem, math, optimization, GCP stack, and deployment in one place. |
 | **01** | [**`01_MANDATORY_BRIEF_DESCRIPTION.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/01_MANDATORY_BRIEF_DESCRIPTION.md) | **Mandatory Brief Description Form Field:** Copy-paste ready text highlighting how the project leverages **Firebase, Firestore, Cloud Run, and Gemini**, plus Earth Engine, BigQuery, and OR-Tools. |
 | **02** | [**`02_PITCH_DECK_SLIDES.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/02_PITCH_DECK_SLIDES.md) | **Prescribed Pitch Deck Template:** Exact content, bullet points, and ASCII diagrams for all 16 slides of the official `AI Builder Cup.pptx` presentation. |
 | **03** | [**`03_3_TO_4_MIN_VIDEO_DEMO_SCRIPT.md`**](file:///Users/itsd-shivaji/Documents/Avani_Albedo_Dev/submission_prep/03_3_TO_4_MIN_VIDEO_DEMO_SCRIPT.md) | **Mandatory 3 to 4 Minute Video Demonstration:** Precise second-by-second recording script (timed at **3:30**) showing live working prototype functionality. |
