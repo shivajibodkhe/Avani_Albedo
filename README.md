@@ -3,12 +3,11 @@
 
 > **Team Name:** Avani Albedo  
 > **Slogan:** *Optimizing Albedo, Cooling the Earth.*  
-> **Repository:** [https://github.com/shivajibodkhe/Avani_Albedo](https://github.com/shivajibodkhe/Avani_Albedo)  
-> **Author:** Shivaji Bodkhe (`srbodkhe@gmail.com`)  
-> **Live Production URL:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)
-> **Live Demo link:** [https://youtu.be/IWFtIbsGGE4] 
-> **Project Wiki:** [https://github.com/shivajibodkhe/Avani_Albedo/wiki](https://github.com/shivajibodkhe/Avani_Albedo/wiki)  
-> **CI/CD:** Automated GitHub Actions ➔ Google Cloud Run (`asia-south1`)  
+> **Repository:** [https://github.com/shivajibodkhe/Avani_Albedo](https://github.com/shivajibodkhe/Avani_Albedo)*  
+> **Author:** Shivaji Bodkhe (`srbodkhe@gmail.com`)*  
+> **Live Production URL:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)*  
+> **Project Wiki:** [https://github.com/shivajibodkhe/Avani_Albedo/wiki](https://github.com/shivajibodkhe/Avani_Albedo/wiki)*  
+> **CI/CD:** Automated GitHub Actions ➔ Google Cloud Run (`asia-south1`)*  
 > **Test Suite:** 25/25 Tests Passing (100% Pass Rate)
 
 
@@ -18,7 +17,7 @@
 
 For immediate testing of the live production deployment:
 - **Live URL:** [https://avani-albedo-hbxrfbol2a-el.a.run.app](https://avani-albedo-hbxrfbol2a-el.a.run.app)
-- **1-Click Judge Access:** Click the purple **"⚡ 1-Click Judge / Evaluator Access"** button on the landing page (no setup or signup required).
+- **Live Demo link:** https://youtu.be/IWFtIbsGGE4 
 - **Google 1-Click Sign-In:** Authenticate instantly with any approved Google account via Firebase Auth.
 - **Swagger API Docs (Secured):** [https://avani-albedo-hbxrfbol2a-el.a.run.app/docs](https://avani-albedo-hbxrfbol2a-el.a.run.app/docs)
 
